@@ -1,0 +1,45 @@
+# Builds the Angular blog and deploys it to GitHub Pages (project page).
+# Live URL: https://parwejalam.github.io/blog/
+# Posts are prerendered to static HTML at build time for SEO.
+
+name: Build and Deploy
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+
+      - run: npm ci --legacy-peer-deps
+      - run: npm run build
+
+      # GitHub Pages has no SPA fallback. Serving the client-render shell as
+      # 404.html lets any non-prerendered deep link still boot the app.
+      - run: npm run deploy:404
+
+      # Only publish on pushes to main, not on pull requests.
+      - name: Deploy
+        if: github.event_name == 'push'
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: dist/blog/browser
