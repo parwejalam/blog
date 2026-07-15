@@ -8,6 +8,30 @@ export interface PostMeta {
 
 export interface ParsedPost extends PostMeta {
   body: string;
+  /** Human-friendly date, e.g. "Jul 14, 2026". Falls back to the raw string. */
+  dateLabel: string;
+  /** Estimated read time in minutes (>= 1), from the body word count. */
+  readingTime: number;
+}
+
+/** Words per minute used for the read-time estimate. */
+const WPM = 200;
+
+function readingTime(body: string): number {
+  const words = body.trim().split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.round(words / WPM));
+}
+
+function dateLabel(date: string): string {
+  // Dates are ISO `YYYY-MM-DD`. Parse as UTC to avoid off-by-one from timezones.
+  const d = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return date;
+  return d.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
 }
 
 const FENCE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
@@ -37,6 +61,8 @@ export function parseFrontmatter(raw: string): ParsedPost {
     if (!meta[key]) throw new Error(`Post frontmatter missing "${key}"`);
   }
 
+  const body = raw.slice(match[0].length).trim();
+
   return {
     title: meta['title'],
     slug: meta['slug'],
@@ -46,6 +72,8 @@ export function parseFrontmatter(raw: string): ParsedPost {
       .split(',')
       .map((t) => t.trim())
       .filter(Boolean),
-    body: raw.slice(match[0].length).trim(),
+    body,
+    dateLabel: dateLabel(meta['date']),
+    readingTime: readingTime(body),
   };
 }

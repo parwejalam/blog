@@ -32,6 +32,9 @@
               }
             ],
             "styles": [
+              "@fontsource-variable/inter/index.css",
+              "@fontsource-variable/newsreader/index.css",
+              "@fontsource-variable/jetbrains-mono/index.css",
               "src/styles.scss"
             ],
             "scripts": [],
@@ -103,6 +106,9 @@
               }
             ],
             "styles": [
+              "@fontsource-variable/inter/index.css",
+              "@fontsource-variable/newsreader/index.css",
+              "@fontsource-variable/jetbrains-mono/index.css",
               "src/styles.scss"
             ],
             "scripts": []

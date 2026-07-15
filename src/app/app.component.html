@@ -1,8 +1,19 @@
 <a class="skip-link" href="#main">Skip to content</a>
 <header class="site-header">
   <nav>
-    <a class="brand" routerLink="/">parwej.dev</a>
-    <a href="https://parwejalam.github.io/">Portfolio</a>
+    <a class="brand" routerLink="/">parwej<span>.dev</span></a>
+    <div class="nav-links">
+      <a class="link" href="https://parwejalam.github.io/">Portfolio</a>
+      <button
+        type="button"
+        class="theme-toggle"
+        (click)="theme.toggle()"
+        [attr.aria-label]="theme.theme() === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'"
+        title="Toggle theme"
+      >
+        {{ theme.theme() === 'dark' ? '☀️' : '🌙' }}
+      </button>
+    </div>
   </nav>
 </header>
 

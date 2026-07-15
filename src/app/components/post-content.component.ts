@@ -1,6 +1,6 @@
 import { NgComponentOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, Input, Type, computed, signal } from '@angular/core';
-import { marked } from 'marked';
+import { renderMarkdown } from '../content/markdown';
 import { DEMO_REGISTRY } from '../demos/demo-registry';
 
 type Segment =
@@ -68,6 +68,6 @@ export class PostContentComponent {
   }
 
   private render(markdown: string): string {
-    return marked.parse(markdown, { async: false }) as string;
+    return renderMarkdown(markdown);
   }
 }

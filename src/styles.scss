@@ -1,23 +1,45 @@
 :root {
-  --bg: #ffffff;
-  --surface: #f7f7f8;
-  --text: #1a1a1a;
-  --muted: #6b7280;
-  --border: #e5e7eb;
-  --accent: #2563eb;
-  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --bg: #fbfbfd;
+  --surface: #ffffff;
+  --surface-2: #f4f4f7;
+  --text: #16181d;
+  --muted: #656c7a;
+  --border: #e7e8ee;
+  --border-strong: #d8dae2;
+  --accent: #4f46e5;
+  --accent-soft: #eef0fe;
+  --shadow: 0 1px 2px rgba(16, 18, 29, 0.04), 0 4px 16px rgba(16, 18, 29, 0.05);
+  --shadow-hover: 0 2px 4px rgba(16, 18, 29, 0.06), 0 10px 30px rgba(16, 18, 29, 0.09);
+  --mono: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --sans: "Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --display: "Newsreader Variable", Georgia, "Times New Roman", serif;
+}
+
+// Dark theme applies when the OS prefers dark AND the user hasn't chosen a theme,
+// or when the user explicitly selects dark via the toggle ([data-theme="dark"]).
+// The explicit [data-theme="light"] wins over the OS preference.
+@mixin dark-tokens {
+  --bg: #0e0f13;
+  --surface: #16181e;
+  --surface-2: #1b1e26;
+  --text: #e9ebf1;
+  --muted: #9aa1b0;
+  --border: #262a34;
+  --border-strong: #333846;
+  --accent: #8b93ff;
+  --accent-soft: #1c1f36;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.35);
+  --shadow-hover: 0 2px 4px rgba(0, 0, 0, 0.4), 0 12px 34px rgba(0, 0, 0, 0.5);
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0f1115;
-    --surface: #171a21;
-    --text: #e7e9ee;
-    --muted: #9aa2af;
-    --border: #2a2f3a;
-    --accent: #6ea8fe;
+  :root:not([data-theme="light"]) {
+    @include dark-tokens;
   }
+}
+
+:root[data-theme="dark"] {
+  @include dark-tokens;
 }
 
 * {
@@ -34,9 +56,10 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--sans);
-  line-height: 1.65;
-  font-size: 1.05rem;
+  line-height: 1.7;
+  font-size: 1.075rem;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 a {
@@ -54,10 +77,17 @@ a {
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--border);
   border-radius: 6px;
+  z-index: 10;
 }
 
+/* ---------- Header ---------- */
 .site-header {
   border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  backdrop-filter: blur(8px);
+  z-index: 5;
 }
 .site-header nav {
   max-width: 720px;
@@ -72,19 +102,51 @@ a {
   font-family: var(--mono);
   text-decoration: none;
   color: var(--text);
+  letter-spacing: -0.02em;
 }
-.site-header nav a {
+.site-header .brand span {
+  color: var(--accent);
+}
+.site-header .nav-links {
+  margin-left: auto;
+  display: flex;
+  gap: 1.25rem;
+  align-items: center;
+}
+.site-header nav a.link {
   text-decoration: none;
   color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 500;
 }
-.site-header nav a:hover {
+.site-header nav a.link:hover {
   color: var(--accent);
 }
 
+.theme-toggle {
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.theme-toggle:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+/* ---------- Layout ---------- */
 .site-main {
   max-width: 720px;
   margin: 0 auto;
-  padding: 3rem 1.25rem;
+  padding: 3.5rem 1.25rem 4rem;
   min-height: 60vh;
 }
 
@@ -96,42 +158,175 @@ a {
 .site-footer p {
   max-width: 720px;
   margin: 0 auto;
-  padding: 1.5rem 1.25rem;
+  padding: 2rem 1.25rem;
 }
 
-/* Rendered Markdown */
+/* ---------- Shared meta bits ---------- */
+.meta {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-family: var(--mono);
+  flex-wrap: wrap;
+}
+.meta .dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--muted);
+  opacity: 0.6;
+}
+.tag {
+  display: inline-block;
+  font-size: 0.74rem;
+  font-weight: 500;
+  font-family: var(--sans);
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 0.18em 0.6em;
+  border-radius: 999px;
+}
+
+/* ---------- Rendered Markdown ---------- */
+.prose {
+  font-size: 1.09rem;
+}
 .prose h2 {
-  margin-top: 2.5rem;
-  font-size: 1.4rem;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 1.6rem;
+  margin-top: 2.75rem;
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.01em;
 }
 .prose h3 {
+  font-weight: 700;
+  font-size: 1.2rem;
   margin-top: 2rem;
-  font-size: 1.15rem;
+  margin-bottom: 0.5rem;
 }
 .prose p,
 .prose ul,
 .prose ol {
-  margin: 1rem 0;
+  margin: 1.15rem 0;
+}
+.prose ul,
+.prose ol {
+  padding-left: 1.3rem;
+}
+.prose li {
+  margin: 0.4rem 0;
+}
+.prose a {
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.prose blockquote {
+  margin: 1.5rem 0;
+  padding: 0.3rem 0 0.3rem 1.2rem;
+  border-left: 3px solid var(--accent);
+  color: var(--muted);
+  font-family: var(--display);
+  font-size: 1.15rem;
+  font-style: italic;
 }
 .prose code {
   font-family: var(--mono);
-  font-size: 0.9em;
-  background: var(--surface);
-  padding: 0.15em 0.4em;
-  border-radius: 4px;
-}
-.prose pre {
-  background: var(--surface);
+  font-size: 0.875em;
+  background: var(--surface-2);
+  padding: 0.16em 0.42em;
+  border-radius: 5px;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 1rem 1.25rem;
+}
+
+/* Code block wrapper emitted by the marked renderer (see post-content). */
+.code-block {
+  background: #0d1117;
+  border: 1px solid #1f2530;
+  border-radius: 12px;
+  margin: 1.6rem 0;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.code-block .code-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.9rem;
+  border-bottom: 1px solid #1f2530;
+  background: #0b0e14;
+}
+.code-block .code-head .lang {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: #7d8590;
+  text-transform: lowercase;
+}
+.code-block .code-head .cd {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+}
+.code-block .code-head .cd-r { background: #ff5f56; }
+.code-block .code-head .cd-y { background: #ffbd2e; }
+.code-block .code-head .cd-g { background: #27c93f; }
+.code-block pre {
+  margin: 0;
+  padding: 1.1rem 1.25rem;
   overflow-x: auto;
 }
-.prose pre code {
+.code-block pre code {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  line-height: 1.7;
+  color: #e6edf3;
   background: none;
+  border: none;
   padding: 0;
-  font-size: 0.9rem;
 }
-.prose a {
-  text-underline-offset: 2px;
+
+/* highlight.js token colors — GitHub Dark palette, scoped to code blocks. */
+.code-block .hljs-comment,
+.code-block .hljs-quote {
+  color: #8b949e;
+  font-style: italic;
 }
+.code-block .hljs-keyword,
+.code-block .hljs-selector-tag,
+.code-block .hljs-literal,
+.code-block .hljs-doctag,
+.code-block .hljs-name {
+  color: #ff7b72;
+}
+.code-block .hljs-string,
+.code-block .hljs-meta .hljs-string,
+.code-block .hljs-regexp {
+  color: #a5d6ff;
+}
+.code-block .hljs-number,
+.code-block .hljs-variable,
+.code-block .hljs-template-variable,
+.code-block .hljs-attr,
+.code-block .hljs-attribute {
+  color: #79c0ff;
+}
+.code-block .hljs-title,
+.code-block .hljs-title.function_,
+.code-block .hljs-section {
+  color: #d2a8ff;
+}
+.code-block .hljs-title.class_,
+.code-block .hljs-type,
+.code-block .hljs-built_in {
+  color: #7ee787;
+}
+.code-block .hljs-symbol,
+.code-block .hljs-bullet,
+.code-block .hljs-meta {
+  color: #ffa657;
+}
+.code-block .hljs-emphasis { font-style: italic; }
+.code-block .hljs-strong { font-weight: 600; }
