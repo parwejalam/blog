@@ -13,10 +13,17 @@ import { SeoService } from '../services/seo.service';
   template: `
     @if (post) {
       <article>
+        <a class="back" routerLink="/">← All posts</a>
         <header class="post-header">
-          <a class="back" routerLink="/">← All posts</a>
           <h1>{{ post.title }}</h1>
-          <time [attr.datetime]="post.date">{{ post.date }}</time>
+          <div class="meta">
+            @for (tag of post.tags; track tag) {
+              <span class="tag">{{ tag }}</span>
+            }
+            <time [attr.datetime]="post.date">{{ post.dateLabel }}</time>
+            <span class="dot"></span>
+            <span>{{ post.readingTime }} min read</span>
+          </div>
         </header>
         <app-post-content [markdown]="post.body" />
       </article>
@@ -29,26 +36,37 @@ import { SeoService } from '../services/seo.service';
   `,
   styles: [
     `
-      .post-header {
-        margin-bottom: 2rem;
-      }
       .back {
-        display: inline-block;
-        margin-bottom: 1.5rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin-bottom: 1.75rem;
         color: var(--muted);
         text-decoration: none;
         font-size: 0.9rem;
+        font-weight: 500;
       }
       .back:hover {
         color: var(--accent);
       }
-      .post-header h1 {
-        margin: 0 0 0.4rem;
+      .post-header {
+        margin-bottom: 2.5rem;
+        padding-bottom: 1.75rem;
+        border-bottom: 1px solid var(--border);
       }
-      .post-header time {
-        color: var(--muted);
-        font-family: var(--mono);
+      .post-header h1 {
+        font-family: var(--display);
+        font-weight: 600;
+        font-size: 2.3rem;
+        line-height: 1.2;
+        letter-spacing: -0.015em;
+        margin: 0 0 0.8rem;
+      }
+      .post-header .meta {
         font-size: 0.85rem;
+      }
+      time {
+        white-space: nowrap;
       }
     `,
   ],
