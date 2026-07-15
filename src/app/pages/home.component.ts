@@ -1,7 +1,20 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
+import { DOCUMENT, isPlatformBrowser } from '@angular/common';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  OnDestroy,
+  OnInit,
+  PLATFORM_ID,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { POSTS } from '../content/posts';
+import { ParsedPost } from '../content/frontmatter';
 import { SeoService } from '../services/seo.service';
+import { SearchService } from '../services/search.service';
 
 @Component({
   selector: 'app-home',
@@ -17,30 +30,53 @@ import { SeoService } from '../services/seo.service';
       </div>
     </section>
 
-    <p class="section-label">Writing</p>
-    <ul class="post-list">
-      @for (post of posts; track post.slug) {
-        <li>
-          <a class="card" [routerLink]="['/', post.slug]">
-            <h2 class="card-title">{{ post.title }}</h2>
-            <p class="card-desc">{{ post.description }}</p>
-            <div class="meta">
-              @if (post.tags[0]) {
-                <span class="tag">{{ post.tags[0] }}</span>
-              }
-              <time [attr.datetime]="post.date">{{ post.dateLabel }}</time>
-              <span class="dot"></span>
-              <span>{{ post.readingTime }} min read</span>
-            </div>
-          </a>
-        </li>
+    <div class="search">
+      <input
+        #searchBox
+        type="search"
+        class="search-input"
+        placeholder="Search posts…  (press /)"
+        aria-label="Search posts"
+        [value]="query()"
+        (input)="onQuery(searchBox.value)"
+      />
+    </div>
+
+    <p class="section-label">
+      @if (query()) {
+        {{ results().length }} result{{ results().length === 1 ? '' : 's' }}
+      } @else {
+        Writing
       }
-    </ul>
+    </p>
+
+    @if (results().length) {
+      <ul class="post-list">
+        @for (post of results(); track post.slug) {
+          <li>
+            <a class="card" [routerLink]="['/', post.slug]">
+              <h2 class="card-title">{{ post.title }}</h2>
+              <p class="card-desc">{{ post.description }}</p>
+              <div class="meta">
+                @if (post.tags[0]) {
+                  <span class="tag">{{ post.tags[0] }}</span>
+                }
+                <time [attr.datetime]="post.date">{{ post.dateLabel }}</time>
+                <span class="dot"></span>
+                <span>{{ post.readingTime }} min read</span>
+              </div>
+            </a>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="empty">No posts match “{{ query() }}”.</p>
+    }
   `,
   styles: [
     `
       .intro {
-        margin-bottom: 3rem;
+        margin-bottom: 2rem;
         display: flex;
         gap: 1.1rem;
         align-items: center;
@@ -69,6 +105,28 @@ import { SeoService } from '../services/seo.service';
         color: var(--muted);
         margin: 0;
         font-size: 1rem;
+      }
+      .search {
+        margin-bottom: 2rem;
+      }
+      .search-input {
+        width: 100%;
+        font-family: var(--sans);
+        font-size: 1rem;
+        color: var(--text);
+        background: var(--surface);
+        border: 1px solid var(--border-strong);
+        border-radius: 12px;
+        padding: 0.7rem 1rem;
+        transition: border-color 0.15s, box-shadow 0.15s;
+      }
+      .search-input::placeholder {
+        color: var(--muted);
+      }
+      .search-input:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-soft);
       }
       .section-label {
         font-size: 0.78rem;
@@ -118,12 +176,42 @@ import { SeoService } from '../services/seo.service';
       time {
         white-space: nowrap;
       }
+      .empty {
+        color: var(--muted);
+      }
     `,
   ],
 })
-export class HomeComponent implements OnInit {
+export class HomeComponent implements OnInit, OnDestroy {
   private readonly seo = inject(SeoService);
-  readonly posts = POSTS;
+  private readonly search = inject(SearchService);
+  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+  private readonly doc = inject(DOCUMENT);
+
+  private readonly searchBox = viewChild<ElementRef<HTMLInputElement>>('searchBox');
+
+  readonly query = signal('');
+  readonly results = signal<ParsedPost[]>(POSTS);
+
+  private readonly onKeydown = (event: KeyboardEvent): void => {
+    if (event.key !== '/' || event.defaultPrevented) return;
+    const el = this.doc.activeElement;
+    const typing =
+      el instanceof HTMLInputElement ||
+      el instanceof HTMLTextAreaElement ||
+      (el as HTMLElement | null)?.isContentEditable === true;
+    if (typing) return;
+    event.preventDefault();
+    this.searchBox()?.nativeElement.focus();
+  };
+
+  async onQuery(value: string): Promise<void> {
+    this.query.set(value);
+    if (value.trim()) {
+      await this.search.ensureReady();
+    }
+    this.results.set(this.search.search(value));
+  }
 
   ngOnInit(): void {
     this.seo.update({
@@ -132,5 +220,15 @@ export class HomeComponent implements OnInit {
       path: '/blog/',
       type: 'website',
     });
+
+    if (this.isBrowser) {
+      this.doc.addEventListener('keydown', this.onKeydown);
+    }
+  }
+
+  ngOnDestroy(): void {
+    if (this.isBrowser) {
+      this.doc.removeEventListener('keydown', this.onKeydown);
+    }
   }
 }
