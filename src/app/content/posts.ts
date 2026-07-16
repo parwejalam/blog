@@ -15,6 +15,7 @@ import coderToOrchestrator from '../../content/posts/coder-to-orchestrator.md';
 import vibeCoding from '../../content/posts/vibe-coding-honestly.md';
 import n8nLlm from '../../content/posts/n8n-llm-automation.md';
 import aiBadPatterns from '../../content/posts/ai-without-bad-patterns.md';
+import helpscoutTwoApis from '../../content/posts/helpscout-two-apis-two-auth.md';
 
 const RAW_POSTS: string[] = [
   helloWorld,
@@ -29,6 +30,7 @@ const RAW_POSTS: string[] = [
   vibeCoding,
   n8nLlm,
   aiBadPatterns,
+  helpscoutTwoApis,
 ];
 
 // Parsed once, sorted newest-first.
