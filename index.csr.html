@@ -4,6 +4,24 @@
 <head>
   <script> var huOptions = { "appID": "parwejalamgithubio-d06dac0", "currentLanguage": "en", "blocking": true, "globalCookie": false, "googleConsentDefault": { "ad_storage": 4, "analytics_storage": 3, "functionality_storage": 2, "personalization_storage": 2, "security_storage": 2, "ad_personalization": 4, "ad_user_data": 4 }, "facebookConsentDefault": { "consent": 4 } } </script>
   <script src="https://stage-app.hu-manity.co/banner/hu-banner.min.js" type="text/javascript" charset="utf-8"></script>
+
+  <!-- Google tag (gtag.js) — loads after the consent banner so Consent Mode defaults apply first. -->
+  <script async="" src="https://www.googletagmanager.com/gtag/js?id=G-H3SCD0PC6N"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    // Block-before-consent: default all storage to denied until the banner grants it.
+    gtag('consent', 'default', {
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      analytics_storage: 'denied'
+    });
+    gtag('js', new Date());
+    // send_page_view: false — the AnalyticsService sends every page_view (incl. first) on router navigation.
+    gtag('config', 'G-H3SCD0PC6N', { send_page_view: false });
+  </script>
+
   <meta charset="utf-8">
   <title>Parwej Alam</title>
   <meta name="description" content="Notes on Angular, TypeScript, and AI automation by Parwej Alam.">
@@ -23,10 +41,10 @@
       } catch (e) {}
     })();
   </script>
-<style>:root{--bg:#fbfbfd;--surface:#ffffff;--surface-2:#f4f4f7;--text:#16181d;--muted:#656c7a;--border:#e7e8ee;--border-strong:#d8dae2;--accent:#4f46e5;--accent-soft:#eef0fe;--shadow:0 1px 2px rgba(16, 18, 29, .04), 0 4px 16px rgba(16, 18, 29, .05);--shadow-hover:0 2px 4px rgba(16, 18, 29, .06), 0 10px 30px rgba(16, 18, 29, .09);--mono:"JetBrains Mono Variable", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;--sans:"Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;--display:"Newsreader Variable", Georgia, "Times New Roman", serif}*{box-sizing:border-box}html,body{margin:0;padding:0}body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.7;font-size:1.075rem;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}</style><link rel="stylesheet" href="styles-RYIFDUPT.css" media="print" onload="this.media='all'"><noscript><link rel="stylesheet" href="styles-RYIFDUPT.css"></noscript></head>
+<style>:root{--bg:#fbfbfd;--surface:#ffffff;--surface-2:#f4f4f7;--text:#16181d;--muted:#656c7a;--border:#e7e8ee;--border-strong:#d8dae2;--accent:#4f46e5;--accent-soft:#eef0fe;--shadow:0 1px 2px rgba(16, 18, 29, .04), 0 4px 16px rgba(16, 18, 29, .05);--shadow-hover:0 2px 4px rgba(16, 18, 29, .06), 0 10px 30px rgba(16, 18, 29, .09);--mono:"JetBrains Mono Variable", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;--sans:"Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;--display:"Newsreader Variable", Georgia, "Times New Roman", serif}*{box-sizing:border-box}html,body{margin:0;padding:0}body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.7;font-size:1.075rem;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}</style><link rel="stylesheet" href="styles-QN624VI4.css" media="print" onload="this.media='all'"><noscript><link rel="stylesheet" href="styles-QN624VI4.css"></noscript></head>
 
 <body ngcm="">
   <app-root></app-root>
-<link rel="modulepreload" href="chunk-EQDQRRRY.js"><script src="polyfills-5CFQRCPP.js" type="module"></script><script src="main-7MAUQHGR.js" type="module"></script></body>
+<link rel="modulepreload" href="chunk-EQDQRRRY.js"><script src="polyfills-5CFQRCPP.js" type="module"></script><script src="main-ACRY4OGU.js" type="module"></script></body>
 
 </html>
