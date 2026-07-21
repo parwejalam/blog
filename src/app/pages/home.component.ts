@@ -1,18 +1,10 @@
-import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
-  ElementRef,
-  OnDestroy,
   OnInit,
-  PLATFORM_ID,
   inject,
-  signal,
-  viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { POSTS } from '../content/posts';
-import { ParsedPost } from '../content/frontmatter';
 import { SeoService } from '../services/seo.service';
 import { SearchService } from '../services/search.service';
 
@@ -29,18 +21,6 @@ import { SearchService } from '../services/search.service';
         <p>Angular developer. Notes on Angular, TypeScript, and AI automation.</p>
       </div>
     </section>
-
-    <div class="search">
-      <input
-        #searchBox
-        type="search"
-        class="search-input"
-        placeholder="Search posts…  (press /)"
-        aria-label="Search posts"
-        [value]="query()"
-        (input)="onQuery(searchBox.value)"
-      />
-    </div>
 
     <p class="section-label">
       @if (query()) {
@@ -106,28 +86,6 @@ import { SearchService } from '../services/search.service';
         margin: 0;
         font-size: 1rem;
       }
-      .search {
-        margin-bottom: 2rem;
-      }
-      .search-input {
-        width: 100%;
-        font-family: var(--sans);
-        font-size: 1rem;
-        color: var(--text);
-        background: var(--surface);
-        border: 1px solid var(--border-strong);
-        border-radius: 12px;
-        padding: 0.7rem 1rem;
-        transition: border-color 0.15s, box-shadow 0.15s;
-      }
-      .search-input::placeholder {
-        color: var(--muted);
-      }
-      .search-input:focus {
-        outline: none;
-        border-color: var(--accent);
-        box-shadow: 0 0 0 3px var(--accent-soft);
-      }
       .section-label {
         font-size: 0.78rem;
         text-transform: uppercase;
@@ -182,36 +140,12 @@ import { SearchService } from '../services/search.service';
     `,
   ],
 })
-export class HomeComponent implements OnInit, OnDestroy {
+export class HomeComponent implements OnInit {
   private readonly seo = inject(SeoService);
   private readonly search = inject(SearchService);
-  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
-  private readonly doc = inject(DOCUMENT);
 
-  private readonly searchBox = viewChild<ElementRef<HTMLInputElement>>('searchBox');
-
-  readonly query = signal('');
-  readonly results = signal<ParsedPost[]>(POSTS);
-
-  private readonly onKeydown = (event: KeyboardEvent): void => {
-    if (event.key !== '/' || event.defaultPrevented) return;
-    const el = this.doc.activeElement;
-    const typing =
-      el instanceof HTMLInputElement ||
-      el instanceof HTMLTextAreaElement ||
-      (el as HTMLElement | null)?.isContentEditable === true;
-    if (typing) return;
-    event.preventDefault();
-    this.searchBox()?.nativeElement.focus();
-  };
-
-  async onQuery(value: string): Promise<void> {
-    this.query.set(value);
-    if (value.trim()) {
-      await this.search.ensureReady();
-    }
-    this.results.set(this.search.search(value));
-  }
+  readonly query = this.search.query;
+  readonly results = this.search.results;
 
   ngOnInit(): void {
     this.seo.update({
@@ -220,15 +154,5 @@ export class HomeComponent implements OnInit, OnDestroy {
       path: '/blog/',
       type: 'website',
     });
-
-    if (this.isBrowser) {
-      this.doc.addEventListener('keydown', this.onKeydown);
-    }
-  }
-
-  ngOnDestroy(): void {
-    if (this.isBrowser) {
-      this.doc.removeEventListener('keydown', this.onKeydown);
-    }
   }
 }

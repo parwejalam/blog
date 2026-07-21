@@ -107,11 +107,35 @@ a {
 .site-header .brand span {
   color: var(--accent);
 }
+.site-header .header-search {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 320px;
+}
+.site-header .search-input {
+  width: 100%;
+  font-family: var(--sans);
+  font-size: 0.9rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  padding: 0.45rem 0.75rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.site-header .search-input::placeholder {
+  color: var(--muted);
+}
+.site-header .search-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
 .site-header .nav-links {
-  margin-left: auto;
   display: flex;
   gap: 1.25rem;
   align-items: center;
+  flex: none;
 }
 .site-header nav a.link {
   text-decoration: none;

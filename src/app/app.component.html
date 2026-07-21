@@ -2,6 +2,17 @@
 <header class="site-header">
   <nav>
     <a class="brand" routerLink="/">parwej<span>.dev</span></a>
+    <div class="header-search">
+      <input
+        #searchBox
+        type="search"
+        class="search-input"
+        placeholder="Search posts…  (press /)"
+        aria-label="Search posts"
+        [value]="search.query()"
+        (input)="onQuery(searchBox.value)"
+      />
+    </div>
     <div class="nav-links">
       <a class="link" href="https://parwejalam.github.io/">Portfolio</a>
       <button
