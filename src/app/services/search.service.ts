@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import type Fuse from 'fuse.js';
 import { POSTS } from '../content/posts';
 import { ParsedPost } from '../content/frontmatter';
@@ -13,6 +13,22 @@ import { ParsedPost } from '../content/frontmatter';
 export class SearchService {
   private fuse: Fuse<ParsedPost> | null = null;
   private loading?: Promise<void>;
+
+  /**
+   * Shared search state. The input lives in the site header, so the query and
+   * its ranked results are owned here and read reactively by the home page.
+   */
+  readonly query = signal('');
+  readonly results = signal<ParsedPost[]>(POSTS);
+
+  /** Update the query, lazily build the index, and refresh results. */
+  async setQuery(value: string): Promise<void> {
+    this.query.set(value);
+    if (value.trim()) {
+      await this.ensureReady();
+    }
+    this.results.set(this.search(value));
+  }
 
   /** Lazily import fuse.js and build the index. Safe to call repeatedly. */
   ensureReady(): Promise<void> {
