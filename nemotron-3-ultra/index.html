@@ -1,0 +1,104 @@
+<!DOCTYPE html><html lang="en" data-beasties-container><head>
+  <script> var huOptions = { "appID": "parwejalamgithubio-d06dac0", "currentLanguage": "en", "blocking": true, "globalCookie": false, "googleConsentDefault": { "ad_storage": 4, "analytics_storage": 3, "functionality_storage": 2, "personalization_storage": 2, "security_storage": 2, "ad_personalization": 4, "ad_user_data": 4 }, "facebookConsentDefault": { "consent": 4 } } </script>
+  <script src="https://stage-app.hu-manity.co/banner/hu-banner.min.js" type="text/javascript" charset="utf-8"></script>
+
+  <!-- Google tag (gtag.js) — loads after the consent banner so Consent Mode defaults apply first. -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-H3SCD0PC6N"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    // Block-before-consent: default all storage to denied until the banner grants it.
+    gtag('consent', 'default', {
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      analytics_storage: 'denied'
+    });
+    gtag('js', new Date());
+    // send_page_view: false — the AnalyticsService sends every page_view (incl. first) on router navigation.
+    gtag('config', 'G-H3SCD0PC6N', { send_page_view: false });
+  </script>
+
+  <meta charset="utf-8">
+  <title>Nemotron 3 Ultra is open, and I still can't run it locally · Parwej Alam</title>
+  <meta name="description" content="NVIDIA's 550B open-weight model looked like a drop-in upgrade for my local n8n workflow. Then I checked the memory requirements.">
+  <meta name="author" content="Parwej Alam">
+  <base href="/blog/">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <script>
+    // Set the theme before first paint to avoid a flash of the wrong colors.
+    (function () {
+      try {
+        var t = localStorage.getItem('theme');
+        if (t !== 'light' && t !== 'dark') {
+          t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
+<style>:root{--bg: #fbfbfd;--surface: #ffffff;--surface-2: #f4f4f7;--text: #16181d;--muted: #656c7a;--border: #e7e8ee;--border-strong: #d8dae2;--accent: #4f46e5;--accent-soft: #eef0fe;--shadow: 0 1px 2px rgba(16, 18, 29, .04), 0 4px 16px rgba(16, 18, 29, .05);--shadow-hover: 0 2px 4px rgba(16, 18, 29, .06), 0 10px 30px rgba(16, 18, 29, .09);--mono: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;--sans: "Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;--display: "Newsreader Variable", Georgia, "Times New Roman", serif}*{box-sizing:border-box}html,body{margin:0;padding:0}body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.7;font-size:1.075rem;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}a{color:var(--accent)}.skip-link{position:absolute;left:-999px}.skip-link:focus{left:1rem;top:1rem;background:var(--bg);padding:.5rem .75rem;border:1px solid var(--border);border-radius:6px;z-index:10}.site-header{border-bottom:1px solid var(--border);position:sticky;top:0;background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(8px);z-index:5}.site-header nav{max-width:720px;margin:0 auto;padding:1rem 1.25rem;display:flex;gap:1.5rem;align-items:center}.site-header .brand{font-weight:700;font-family:var(--mono);text-decoration:none;color:var(--text);letter-spacing:-.02em}.site-header .brand span{color:var(--accent)}.site-header .header-search{flex:1 1 auto;min-width:0;max-width:320px}.site-header .search-input{width:100%;font-family:var(--sans);font-size:.9rem;color:var(--text);background:var(--surface);border:1px solid var(--border-strong);border-radius:10px;padding:.45rem .75rem;transition:border-color .15s,box-shadow .15s}.site-header .search-input::placeholder{color:var(--muted)}.site-header .search-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}.site-header .nav-links{display:flex;gap:1.25rem;align-items:center;flex:none}.site-header nav a.link{text-decoration:none;color:var(--muted);font-size:.95rem;font-weight:500}.site-header nav a.link:hover{color:var(--accent)}.theme-toggle{border:1px solid var(--border-strong);background:var(--surface);color:var(--text);width:34px;height:34px;border-radius:9px;cursor:pointer;font-size:1rem;display:inline-flex;align-items:center;justify-content:center;transition:border-color .15s,transform .15s}.theme-toggle:hover{border-color:var(--accent);transform:translateY(-1px)}.site-main{max-width:720px;margin:0 auto;padding:3.5rem 1.25rem 4rem;min-height:60vh}.site-footer{border-top:1px solid var(--border);color:var(--muted);font-size:.85rem}.site-footer p{max-width:720px;margin:0 auto;padding:2rem 1.25rem}.meta{display:flex;gap:.75rem;align-items:center;font-size:.82rem;color:var(--muted);font-family:var(--mono);flex-wrap:wrap}.meta .dot{width:3px;height:3px;border-radius:50%;background:var(--muted);opacity:.6}.tag{display:inline-block;font-size:.74rem;font-weight:500;font-family:var(--sans);color:var(--accent);background:var(--accent-soft);padding:.18em .6em;border-radius:999px}.prose{font-size:1.09rem}.prose h2{font-family:var(--display);font-weight:600;font-size:1.6rem;margin-top:2.75rem;margin-bottom:.75rem;letter-spacing:-.01em}.prose p,.prose ul{margin:1.15rem 0}.prose ul{padding-left:1.3rem}.prose li{margin:.4rem 0}.prose a{text-underline-offset:3px;text-decoration-color:color-mix(in srgb,var(--accent) 40%,transparent)}.prose code{font-family:var(--mono);font-size:.875em;background:var(--surface-2);padding:.16em .42em;border-radius:5px;border:1px solid var(--border)}.code-block{background:#0d1117;border:1px solid #1f2530;border-radius:12px;margin:1.6rem 0;overflow:hidden;box-shadow:var(--shadow)}.code-block .code-head{display:flex;align-items:center;gap:.5rem;padding:.55rem .9rem;border-bottom:1px solid #1f2530;background:#0b0e14}.code-block .code-head .lang{margin-left:auto;font-family:var(--mono);font-size:.72rem;color:#7d8590;text-transform:lowercase}.code-block .code-head .cd{width:11px;height:11px;border-radius:50%}.code-block .code-head .cd-r{background:#ff5f56}.code-block .code-head .cd-y{background:#ffbd2e}.code-block .code-head .cd-g{background:#27c93f}.code-block pre{margin:0;padding:1.1rem 1.25rem;overflow-x:auto}.code-block pre code{font-family:var(--mono);font-size:.875rem;line-height:1.7;color:#e6edf3;background:none;border:none;padding:0}.code-block .hljs-string{color:#a5d6ff}
+</style><link rel="stylesheet" href="styles-QN624VI4.css" media="print" onload="this.media='all'"><noscript><link rel="stylesheet" href="styles-QN624VI4.css"></noscript><style ng-app-id="ng">.back[_ngcontent-ng-c2192935923]{display:inline-flex;align-items:center;gap:.35rem;margin-bottom:1.75rem;color:var(--muted);text-decoration:none;font-size:.9rem;font-weight:500}.back[_ngcontent-ng-c2192935923]:hover{color:var(--accent)}.post-header[_ngcontent-ng-c2192935923]{margin-bottom:2.5rem;padding-bottom:1.75rem;border-bottom:1px solid var(--border)}.post-header[_ngcontent-ng-c2192935923]   h1[_ngcontent-ng-c2192935923]{font-family:var(--display);font-weight:600;font-size:2.3rem;line-height:1.2;letter-spacing:-.015em;margin:0 0 .8rem}.post-header[_ngcontent-ng-c2192935923]   .meta[_ngcontent-ng-c2192935923]{font-size:.85rem}time[_ngcontent-ng-c2192935923]{white-space:nowrap}</style><meta property="og:title" content="Nemotron 3 Ultra is open, and I still can't run it locally"><meta property="og:description" content="NVIDIA's 550B open-weight model looked like a drop-in upgrade for my local n8n workflow. Then I checked the memory requirements."><meta property="og:type" content="article"><meta property="og:site_name" content="Parwej Alam"><meta property="og:url" content="https://parwejalam.github.io/blog/nemotron-3-ultra"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Nemotron 3 Ultra is open, and I still can't run it locally"><meta name="twitter:description" content="NVIDIA's 550B open-weight model looked like a drop-in upgrade for my local n8n workflow. Then I checked the memory requirements."></head>
+
+<body><!--nghm--><script type="text/javascript" id="ng-event-dispatch-contract">(()=>{function p(t,n,r,o,e,i,f,m){return{eventType:t,event:n,targetElement:r,eic:o,timeStamp:e,eia:i,eirp:f,eiack:m}}function u(t){let n=[],r=e=>{n.push(e)};return{c:t,q:n,et:[],etc:[],d:r,h:e=>{r(p(e.type,e,e.target,t,Date.now()))}}}function s(t,n,r){for(let o=0;o<n.length;o++){let e=n[o];(r?t.etc:t.et).push(e),t.c.addEventListener(e,t.h,r)}}function c(t,n,r,o,e=window){let i=u(t);e._ejsas||(e._ejsas={}),e._ejsas[n]=i,s(i,r),s(i,o,!0)}window.__jsaction_bootstrap=c;})();
+</script><script>window.__jsaction_bootstrap(document.body,"ng",["click","input"],[]);</script>
+  <app-root ng-version="19.2.25" ngh="2" ng-server-context="ssg"><a href="#main" class="skip-link">Skip to content</a><header class="site-header"><nav><a routerlink="/" class="brand" href="/blog/" jsaction="click:;">parwej<span>.dev</span></a><div class="header-search"><input type="search" placeholder="Search posts…  (press /)" aria-label="Search posts" class="search-input" value jsaction="input:;"></div><div class="nav-links"><a href="https://parwejalam.github.io/" class="link">Portfolio</a><button type="button" title="Toggle theme" class="theme-toggle" aria-label="Switch to dark theme" jsaction="click:;"> 🌙 </button></div></nav></header><main id="main" class="site-main"><router-outlet></router-outlet><app-post _nghost-ng-c2192935923 ngh="1"><article _ngcontent-ng-c2192935923><a _ngcontent-ng-c2192935923 routerlink="/" class="back" href="/blog/" jsaction="click:;">← All posts</a><header _ngcontent-ng-c2192935923 class="post-header"><h1 _ngcontent-ng-c2192935923>Nemotron 3 Ultra is open, and I still can't run it locally</h1><div _ngcontent-ng-c2192935923 class="meta"><span _ngcontent-ng-c2192935923 class="tag">ai</span><span _ngcontent-ng-c2192935923 class="tag">llm</span><span _ngcontent-ng-c2192935923 class="tag">nvidia</span><span _ngcontent-ng-c2192935923 class="tag">n8n</span><!----><time _ngcontent-ng-c2192935923 datetime="2026-08-18">Aug 18, 2026</time><span _ngcontent-ng-c2192935923 class="dot"></span><span _ngcontent-ng-c2192935923>3 min read</span></div></header><app-post-content _ngcontent-ng-c2192935923 ngh="0"><div class="prose"><p>I have an n8n workflow that reads a job description and tells me where my profile falls short. It runs on a small local model through Ollama, and it's fine, but "fine" leaves a lot on the table. So when NVIDIA released <strong>Nemotron 3 Ultra</strong> with open weights and it started showing up as the leading US open-weight model on public leaderboards, my first thought was: drop-in upgrade.</p>
+<p>It isn't. Not on my machine, and probably not on yours either.</p>
+<h2>What it actually is</h2>
+<p>Ultra is the top of a three-model family (Nano, Super, Ultra). The headline numbers:</p>
+<ul>
+<li><strong>550B total parameters, 55B active</strong> — it's a mixture-of-experts model, so only a fraction fires per token</li>
+<li><strong>Hybrid Transformer-Mamba architecture</strong> — state space models mixed with MoE, which NVIDIA calls an architectural first</li>
+<li><strong>Up to 1M context</strong></li>
+<li>Pretrained in NVFP4 on 20 trillion tokens</li>
+<li>Open weights, training data, <em>and</em> recipes, under the Open Model, Weights &amp; Data License</li>
+</ul>
+<p>That third bullet is the genuinely unusual one. Plenty of models ship open weights. Shipping the training data and the recipes alongside them is rarer.</p>
+<h2>The part that killed my plan</h2>
+<p>"Open weights" and "you can run it" are not the same sentence. Here's what it actually needs:</p>
+<table>
+<thead>
+<tr>
+<th>Quantization</th>
+<th>Memory needed</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>3-bit (UD-IQ3_XXS)</td>
+<td>~256 GB RAM</td>
+</tr>
+<tr>
+<td>4-bit</td>
+<td>~300 GB</td>
+</tr>
+<tr>
+<td>8-bit</td>
+<td>~600 GB</td>
+</tr>
+</tbody></table>
+<p>Even the dynamic 1-bit quant is 189 GB just sitting on disk.</p>
+<p>For reference, a well-specced developer laptop has 32 GB. A 4090 has 24 GB of VRAM. You are not an order of magnitude away from running this, you are roughly an order of magnitude away, twice.</p>
+<p>There's also no <code>ollama pull</code> for it. The practical local path is GGUF through llama.cpp:</p>
+<div class="code-block"><div class="code-head"><span class="cd cd-r"></span><span class="cd cd-y"></span><span class="cd cd-g"></span><span class="lang">bash</span></div><pre><code class="hljs">hf download unsloth/NVIDIA-Nemotron-3-Ultra-550B-A55B-GGUF \
+    --include <span class="hljs-string">"*UD-IQ3_XXS*"</span>
+
+./llama.cpp/llama-server \
+    -hf unsloth/NVIDIA-Nemotron-3-Ultra-550B-A55B-GGUF:UD-IQ3_XXS \
+    --port 8001</code></pre></div><p>Which is a real option if you have a 256 GB workstation. I don't.</p>
+<h2>So it's an API model</h2>
+<p>Which feels odd to say about an open-weight release, but that's the honest read for most of us. On OpenRouter it's <strong>$0.50 per million input tokens and $2.20 per million output</strong>, with a free tier, and it pushes around 300 output tokens/sec. That speed is the thing that makes it usable interactively rather than as a batch job.</p>
+<h2>The reliability caveat nobody leads with</h2>
+<p>CodeRabbit ran it against 105 real code-review problems and published the numbers. Ultra passed 58/105 (56%) against their baseline's 60/105 (57%), with precision at 33% versus 34%. Basically a tie on quality.</p>
+<p>The gap was elsewhere. Ultra needed <strong>an average of 36.5 retries</strong> to their baseline's 0.3.</p>
+<p>That's not a quality problem, it's a structured-output reliability problem, and it's exactly the kind of thing that bites in n8n. When a node expects JSON back and the model returns something almost-but-not-quite parseable, your workflow doesn't degrade gracefully. It just breaks, and you find out later.</p>
+<h2>Where that leaves me</h2>
+<p>Not switching. The small local model stays for the cheap, high-frequency steps, because free and instant beats smart when you're iterating on a workflow twenty times an afternoon.</p>
+<p>The 1M context window is the part I keep thinking about, though. Feeding an entire codebase plus a job description plus my profile in one call is a genuinely different kind of prompt than what I can do today. When I try that, it'll be through the API, and I'll be wrapping it in validation and retry logic from the start rather than discovering I need them.</p>
+<p>Open weights are great. Just check the memory table before you plan your afternoon around them.</p>
+<p>Sources: <a href="https://research.nvidia.com/labs/nemotron/files/NVIDIA-Nemotron-3-Ultra-Technical-Report.pdf">NVIDIA technical report</a>, <a href="https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16">Hugging Face model card</a>, <a href="https://unsloth.ai/docs/models/nemotron-3-ultra">Unsloth local guide</a>, <a href="https://www.coderabbit.ai/blog/nemotron-3-ultra-release">CodeRabbit benchmark</a>, <a href="https://openrouter.ai/nvidia/nemotron-3-ultra-550b-a55b">OpenRouter pricing</a>.</p>
+</div><!----><!----><!----></app-post-content></article><!----><!----></app-post><!----></main><footer class="site-footer"><p>© Parwej Alam · Built with Angular, prerendered on GitHub Pages</p></footer></app-root>
+<link rel="modulepreload" href="chunk-EQDQRRRY.js"><script src="polyfills-5CFQRCPP.js" type="module"></script><script src="main-DLGOAZST.js" type="module"></script>
+
+
+<script id="ng-state" type="application/json">{"__nghData__":[{"t":{"1":"t8"},"c":{"1":[{"i":"t8","r":3,"t":{"0":"t9","1":"t10"},"c":{"0":[{"i":"t9","r":1}],"1":[]}}]}},{"t":{"0":"t6","1":"t11"},"c":{"0":[{"i":"t6","r":1,"t":{"8":"t7"},"c":{"8":[{"i":"t7","r":1,"x":4}]}}],"1":[]}},{"c":{"17":[{"i":"c2192935923","r":1}]}}]}</script></body></html>
