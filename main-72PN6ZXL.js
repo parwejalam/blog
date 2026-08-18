@@ -643,32 +643,32 @@ None of this is hard once you know it. But "one product, two APIs, two auth mode
 
 Sources: [Help Scout Docs API](https://developer.helpscout.com/docs-api/), [Inbox API authentication](https://developer.helpscout.com/mailbox-api/overview/authentication/), [Inbox API rate limiting](https://developer.helpscout.com/mailbox-api/overview/rate-limiting/).
 `;var vw=`---
-title: Nemotron 3 Ultra is open, and I still can't run it locally
+title: Nemotron 3 Ultra needs 256 GB of RAM, or none at all
 slug: nemotron-3-ultra
 date: 2026-08-18
-description: NVIDIA's 550B open-weight model looked like a drop-in upgrade for my local n8n workflow. Then I checked the memory requirements.
-tags: ai, llm, nvidia, n8n
+description: NVIDIA's 550B open-weight model is far too big for a normal machine. Ollama runs it as a cloud model instead, so you can try it without downloading anything.
+tags: ai, llm, nvidia, ollama
 ---
 
-I have an n8n workflow that reads a job description and tells me where my profile falls short. It runs on a small local model through Ollama, and it's fine, but "fine" leaves a lot on the table. So when NVIDIA released **Nemotron 3 Ultra** with open weights and it started showing up as the leading US open-weight model on public leaderboards, my first thought was: drop-in upgrade.
+NVIDIA's **Nemotron 3 Ultra** shipped with open weights and immediately started showing up as the leading US open-weight model on public leaderboards. Artificial Analysis put it at 48 on their Intelligence Index.
 
-It isn't. Not on my machine, and probably not on yours either.
+Naturally the first question is whether you can run it. The answer is no, and then, surprisingly, yes.
 
-## What it actually is
+## What it is
 
-Ultra is the top of a three-model family (Nano, Super, Ultra). The headline numbers:
+Ultra sits at the top of a three-model family (Nano, Super, Ultra):
 
-- **550B total parameters, 55B active** \u2014 it's a mixture-of-experts model, so only a fraction fires per token
-- **Hybrid Transformer-Mamba architecture** \u2014 state space models mixed with MoE, which NVIDIA calls an architectural first
+- **550B total parameters, 55B active** \u2014 mixture of experts, so only a slice fires per token
+- **Hybrid Transformer-Mamba architecture**, state space models mixed with MoE, which NVIDIA calls an architectural first
 - **Up to 1M context**
 - Pretrained in NVFP4 on 20 trillion tokens
-- Open weights, training data, *and* recipes, under the Open Model, Weights & Data License
+- Open weights, training data, **and** recipes, under the Open Model, Weights & Data License
 
-That third bullet is the genuinely unusual one. Plenty of models ship open weights. Shipping the training data and the recipes alongside them is rarer.
+That last point is the genuinely unusual one. Open weights are common now. Publishing the training data and the recipes alongside them is not.
 
-## The part that killed my plan
+## The local numbers
 
-"Open weights" and "you can run it" are not the same sentence. Here's what it actually needs:
+"Open weights" and "you can run it" are different claims. Here is what it actually wants:
 
 | Quantization | Memory needed |
 |---|---|
@@ -676,44 +676,75 @@ That third bullet is the genuinely unusual one. Plenty of models ship open weigh
 | 4-bit | ~300 GB |
 | 8-bit | ~600 GB |
 
-Even the dynamic 1-bit quant is 189 GB just sitting on disk.
+Even the dynamic 1-bit quant is 189 GB sitting on disk before you load anything.
 
-For reference, a well-specced developer laptop has 32 GB. A 4090 has 24 GB of VRAM. You are not an order of magnitude away from running this, you are roughly an order of magnitude away, twice.
+A well-specced laptop has 32 GB. A 4090 has 24 GB of VRAM. This isn't a stretch goal, it's a different category of machine.
 
-There's also no \`ollama pull\` for it. The practical local path is GGUF through llama.cpp:
+If you do have a 256 GB workstation, the path is GGUF through llama.cpp:
 
 \`\`\`bash
-hf download unsloth/NVIDIA-Nemotron-3-Ultra-550B-A55B-GGUF \\
-    --include "*UD-IQ3_XXS*"
-
 ./llama.cpp/llama-server \\
     -hf unsloth/NVIDIA-Nemotron-3-Ultra-550B-A55B-GGUF:UD-IQ3_XXS \\
     --port 8001
 \`\`\`
 
-Which is a real option if you have a 256 GB workstation. I don't.
+## The part I missed at first
 
-## So it's an API model
+Ollama carries Nemotron 3 Ultra. Not as a local model, as a **cloud** model:
 
-Which feels odd to say about an open-weight release, but that's the honest read for most of us. On OpenRouter it's **$0.50 per million input tokens and $2.20 per million output**, with a free tier, and it pushes around 300 output tokens/sec. That speed is the thing that makes it usable interactively rather than as a batch job.
+\`\`\`bash
+ollama run nemotron-3-ultra:cloud
+\`\`\`
 
-## The reliability caveat nobody leads with
+The \`:cloud\` suffix routes inference to Ollama's infrastructure. You download a manifest of a few kilobytes, not 189 GB of weights. Nothing lands on your disk, nothing loads into your RAM, and the CLI behaves exactly like it does with a local model. The OpenAI-compatible API works too, so existing clients need a model name change and nothing else.
 
-CodeRabbit ran it against 105 real code-review problems and published the numbers. Ultra passed 58/105 (56%) against their baseline's 60/105 (57%), with precision at 33% versus 34%. Basically a tie on quality.
+You need Ollama 0.12 or newer and a free account:
 
-The gap was elsewhere. Ultra needed **an average of 36.5 retries** to their baseline's 0.3.
+\`\`\`bash
+ollama signin
+ollama run nemotron-3-ultra:cloud
+\`\`\`
 
-That's not a quality problem, it's a structured-output reliability problem, and it's exactly the kind of thing that bites in n8n. When a node expects JSON back and the model returns something almost-but-not-quite parseable, your workflow doesn't degrade gracefully. It just breaks, and you find out later.
+Ollama only offers Ultra this way. For genuinely local Nemotron you drop to Nano or Super.
 
-## Where that leaves me
+There's also an agent integration, if you want a coding agent driven by it:
 
-Not switching. The small local model stays for the cheap, high-frequency steps, because free and instant beats smart when you're iterating on a workflow twenty times an afternoon.
+\`\`\`bash
+ollama launch claude --model nemotron-3-ultra:cloud
+\`\`\`
 
-The 1M context window is the part I keep thinking about, though. Feeding an entire codebase plus a job description plus my profile in one call is a genuinely different kind of prompt than what I can do today. When I try that, it'll be through the API, and I'll be wrapping it in validation and retry logic from the start rather than discovering I need them.
+## "Free" with an asterisk
 
-Open weights are great. Just check the memory table before you plan your afternoon around them.
+The free tier is real and doesn't ask for a card. The limits are where it gets interesting:
 
-Sources: [NVIDIA technical report](https://research.nvidia.com/labs/nemotron/files/NVIDIA-Nemotron-3-Ultra-Technical-Report.pdf), [Hugging Face model card](https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16), [Unsloth local guide](https://unsloth.ai/docs/models/nemotron-3-ultra), [CodeRabbit benchmark](https://www.coderabbit.ai/blog/nemotron-3-ultra-release), [OpenRouter pricing](https://openrouter.ai/nvidia/nemotron-3-ultra-550b-a55b).
+- Usage is metered by **GPU time**, not tokens. Session limits reset every 5 hours, with weekly caps on top
+- Ultra is tagged **High Usage**, so it drains that budget faster than smaller cloud models
+- **One concurrent model** on the free tier. Three on Pro, ten on Max
+- Running models locally doesn't count against any of it
+
+Throughput is roughly 95 tokens/sec on shared capacity and around 210 on dedicated. Ollama states cloud requests are not retained, which is worth knowing before you paste anything sensitive into it.
+
+Treat the free tier as an evaluation lane. It's enough to form a real opinion, not enough to build on.
+
+One caveat for the future: Ollama retires cloud models from time to time. This works in August 2026. If you're reading this much later, check the library page before planning around it.
+
+If you'd rather not use Ollama at all, OpenRouter has it at $0.50 per million input tokens and $2.20 per million output.
+
+## The number nobody leads with
+
+CodeRabbit ran Ultra against 105 real code-review problems and published the results. It passed 58/105 (56%) against their baseline's 60/105 (57%), with precision at 33% versus 34%. Effectively a tie on quality.
+
+The gap was somewhere else entirely. Ultra needed **an average of 36.5 retries** where the baseline needed 0.3.
+
+That's not a reasoning problem, it's a structured-output reliability problem. If you're using it conversationally you'll never notice. If you're parsing JSON out of it in a pipeline, you'll need validation and retry logic from the first line of code rather than bolting them on after something breaks quietly.
+
+## Worth trying
+
+The interesting thing about Ultra isn't that it's the biggest open model. It's the 1M context combined with a zero-footprint way to reach it. Feeding an entire codebase into a frontier open-weight model, from a laptop, without downloading anything, is a genuinely new option.
+
+Just budget for the retries.
+
+Sources: [NVIDIA technical report](https://research.nvidia.com/labs/nemotron/files/NVIDIA-Nemotron-3-Ultra-Technical-Report.pdf), [Ollama: Nemotron 3 Ultra](https://ollama.com/blog/nemotron-3-ultra), [nemotron-3-ultra:cloud](https://ollama.com/library/nemotron-3-ultra:cloud), [Ollama cloud docs](https://docs.ollama.com/cloud), [Unsloth local guide](https://unsloth.ai/docs/models/nemotron-3-ultra), [CodeRabbit benchmark](https://www.coderabbit.ai/blog/nemotron-3-ultra-release).
 `;var vN=[iw,sw,aw,cw,lw,uw,dw,fw,hw,pw,gw,mw,yw,vw],no=vN.map(ow).sort((e,t)=>t.date.localeCompare(e.date));function ww(e){return no.find(t=>t.slug===e)}var ro=class e{fuse=null;loading;query=vt("");results=vt(no);setQuery(t){return Je(this,null,function*(){this.query.set(t),t.trim()&&(yield this.ensureReady()),this.results.set(this.search(t))})}ensureReady(){return this.fuse?Promise.resolve():(this.loading||(this.loading=import("./chunk-L3L2424X.js").then(({default:t})=>{this.fuse=new t(no,{keys:[{name:"title",weight:3},{name:"tags",weight:2},{name:"description",weight:2},{name:"body",weight:1}],threshold:.35,ignoreLocation:!0,minMatchCharLength:2})})),this.loading)}search(t){let n=t.trim();return n?this.fuse?this.fuse.search(n).map(r=>r.item):no:no}static \u0275fac=function(n){return new(n||e)};static \u0275prov=I({token:e,factory:e.\u0275fac,providedIn:"root"})};var wN=e=>["/",e],bN=(e,t)=>t.slug;function EN(e,t){if(e&1&&H(0),e&2){let n=Pt();Cd(" ",n.results().length," result",n.results().length===1?"":"s"," ")}}function DN(e,t){e&1&&H(0," Writing ")}function IN(e,t){if(e&1&&(B(0,"span",9),H(1),V()),e&2){let n=Pt().$implicit;te(),Ye(n.tags[0])}}function CN(e,t){if(e&1&&(B(0,"li")(1,"a",5)(2,"h2",6),H(3),V(),B(4,"p",7),H(5),V(),B(6,"div",8),At(7,IN,2,1,"span",9),B(8,"time"),H(9),V(),st(10,"span",10),B(11,"span"),H(12),V()()()()),e&2){let n=t.$implicit;te(),kt("routerLink",Ly(7,wN,n.slug)),te(2),Ye(n.title),te(2),Ye(n.description),te(2),yn(n.tags[0]?7:-1),te(),Jt("datetime",n.date),te(),Ye(n.dateLabel),te(3),en("",n.readingTime," min read")}}function TN(e,t){if(e&1&&(B(0,"ul",3),$r(1,CN,13,9,"li",null,bN),V()),e&2){let n=Pt();te(),Vr(n.results())}}function SN(e,t){if(e&1&&(B(0,"p",4),H(1),V()),e&2){let n=Pt();te(),en("No posts match \u201C",n.query(),"\u201D.")}}var ac=class e{seo=p(to);search=p(ro);query=this.search.query;results=this.search.results;ngOnInit(){this.seo.update({title:"Blog",description:"Notes on Angular, TypeScript, and AI automation by Parwej Alam.",path:"/blog/",type:"website"})}static \u0275fac=function(n){return new(n||e)};static \u0275cmp=it({type:e,selectors:[["app-home"]],decls:13,vars:2,consts:[[1,"intro"],["aria-hidden","true",1,"avatar"],[1,"section-label"],[1,"post-list"],[1,"empty"],[1,"card",3,"routerLink"],[1,"card-title"],[1,"card-desc"],[1,"meta"],[1,"tag"],[1,"dot"]],template:function(n,r){n&1&&(B(0,"section",0)(1,"div",1),H(2,"PA"),V(),B(3,"div")(4,"h1"),H(5,"Parwej Alam"),V(),B(6,"p"),H(7,"Angular developer. Notes on Angular, TypeScript, and AI automation."),V()()(),B(8,"p",2),At(9,EN,1,2)(10,DN,1,0),V(),At(11,TN,3,0,"ul",3)(12,SN,2,1,"p",4)),n&2&&(te(9),yn(r.query()?9:10),te(2),yn(r.results().length?11:12))},dependencies:[Dn],styles:[".intro[_ngcontent-%COMP%]{margin-bottom:2rem;display:flex;gap:1.1rem;align-items:center}.avatar[_ngcontent-%COMP%]{width:60px;height:60px;border-radius:50%;flex:none;background:linear-gradient(135deg,var(--accent),#a78bfa);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.4rem}.intro[_ngcontent-%COMP%]   h1[_ngcontent-%COMP%]{font-family:var(--display);font-weight:600;font-size:2rem;margin:0 0 .15rem;letter-spacing:-.01em}.intro[_ngcontent-%COMP%]   p[_ngcontent-%COMP%]{color:var(--muted);margin:0;font-size:1rem}.section-label[_ngcontent-%COMP%]{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;margin:0 0 1.1rem}.post-list[_ngcontent-%COMP%]{list-style:none;padding:0;margin:0;display:grid;gap:1rem}.card[_ngcontent-%COMP%]{display:block;border:1px solid var(--border);background:var(--surface);border-radius:14px;padding:1.3rem 1.4rem;box-shadow:var(--shadow);text-decoration:none;color:inherit;transition:box-shadow .18s,transform .18s,border-color .18s}.card[_ngcontent-%COMP%]:hover{box-shadow:var(--shadow-hover);transform:translateY(-2px);border-color:var(--border-strong)}.card-title[_ngcontent-%COMP%]{font-size:1.22rem;font-weight:600;letter-spacing:-.01em;margin:0 0 .5rem}.card[_ngcontent-%COMP%]:hover   .card-title[_ngcontent-%COMP%]{color:var(--accent)}.card-desc[_ngcontent-%COMP%]{margin:0 0 .85rem;color:var(--muted);font-size:.98rem}time[_ngcontent-%COMP%]{white-space:nowrap}.empty[_ngcontent-%COMP%]{color:var(--muted)}"],changeDetection:0})};function mf(){return{async:!1,breaks:!1,extensions:null,gfm:!0,hooks:null,pedantic:!1,renderer:null,silent:!1,tokenizer:null,walkTokens:null}}var tr=mf();function Tw(e){tr=e}var Sw=/[&<>"']/,_N=new RegExp(Sw.source,"g"),_w=/[<>"']|&(?!(#\d{1,7}|#[Xx][a-fA-F0-9]{1,6}|\w+);)/,MN=new RegExp(_w.source,"g"),xN={"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"},bw=e=>xN[e];function Xe(e,t){if(t){if(Sw.test(e))return e.replace(_N,bw)}else if(_w.test(e))return e.replace(MN,bw);return e}var NN=/&(#(?:\d+)|(?:#x[0-9A-Fa-f]+)|(?:\w+));?/ig;function RN(e){return e.replace(NN,(t,n)=>(n=n.toLowerCase(),n==="colon"?":":n.charAt(0)==="#"?n.charAt(1)==="x"?String.fromCharCode(parseInt(n.substring(2),16)):String.fromCharCode(+n.substring(1)):""))}var AN=/(^|[^\[])\^/g;function ne(e,t){let n=typeof e=="string"?e:e.source;t=t||"";let r={replace:(o,i)=>{let s=typeof i=="string"?i:i.source;return s=s.replace(AN,"$1"),n=n.replace(o,s),r},getRegex:()=>new RegExp(n,t)};return r}function Ew(e){try{e=encodeURI(e).replace(/%25/g,"%")}catch{return null}return e}var Si={exec:()=>null};function Dw(e,t){let n=e.replace(/\|/g,(i,s,a)=>{let c=!1,l=s;for(;--l>=0&&a[l]==="\\";)c=!c;return c?"|":" |"}),r=n.split(/ \|/),o=0;if(r[0].trim()||r.shift(),r.length>0&&!r[r.length-1].trim()&&r.pop(),t)if(r.length>t)r.splice(t);else for(;r.length<t;)r.push("");for(;o<r.length;o++)r[o]=r[o].trim().replace(/\\\|/g,"|");return r}function lc(e,t,n){let r=e.length;if(r===0)return"";let o=0;for(;o<r;){let i=e.charAt(r-o-1);if(i===t&&!n)o++;else if(i!==t&&n)o++;else break}return e.slice(0,r-o)}function kN(e,t){if(e.indexOf(t[1])===-1)return-1;let n=0;for(let r=0;r<e.length;r++)if(e[r]==="\\")r++;else if(e[r]===t[0])n++;else if(e[r]===t[1]&&(n--,n<0))return r;return-1}function Iw(e,t,n,r){let o=t.href,i=t.title?Xe(t.title):null,s=e[1].replace(/\\([\[\]])/g,"$1");if(e[0].charAt(0)!=="!"){r.state.inLink=!0;let a={type:"link",raw:n,href:o,title:i,text:s,tokens:r.inlineTokens(s)};return r.state.inLink=!1,a}return{type:"image",raw:n,href:o,title:i,text:Xe(s)}}function ON(e,t){let n=e.match(/^(\s+)(?:```)/);if(n===null)return t;let r=n[1];return t.split(`
 `).map(o=>{let i=o.match(/^\s+/);if(i===null)return o;let[s]=i;return s.length>=r.length?o.slice(r.length):o}).join(`
 `)}var io=class{options;rules;lexer;constructor(t){this.options=t||tr}space(t){let n=this.rules.block.newline.exec(t);if(n&&n[0].length>0)return{type:"space",raw:n[0]}}code(t){let n=this.rules.block.code.exec(t);if(n){let r=n[0].replace(/^ {1,4}/gm,"");return{type:"code",raw:n[0],codeBlockStyle:"indented",text:this.options.pedantic?r:lc(r,`
