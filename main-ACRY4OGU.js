@@ -58,590 +58,590 @@ Here's the exact component above, running live on this page:
 :::demo counter:::
 
 That's it. The demo below the fold is a real Angular component, hydrated after the static HTML loads.
-`;var aw=`---\r
-title: Going zoneless in Angular 20, and why I finally get the hype\r
-slug: angular-20-zoneless\r
-date: 2026-07-12\r
-description: Zone.js has quietly powered Angular change detection for years. Angular 20 makes going without it real. Here is what zoneless actually changes and how I tried it.\r
-tags: angular, performance, signals\r
----\r
-\r
-For most of my Angular career, Zone.js was just there. I never thought about it. It patched async APIs like \`setTimeout\`, \`addEventListener\`, and \`Promise\` so that Angular knew when to run change detection. It worked, but it also meant Angular re-checked large parts of the component tree on every async event, whether anything had actually changed or not.\r
-\r
-Angular 20 makes the alternative real. Zoneless change detection moved to developer preview, and the team has been running it in production (the Google Fonts app has been zoneless for months). This is the first time going without Zone.js feels like a real option and not an experiment.\r
-\r
-## What zoneless actually means\r
-\r
-Without Zone.js, Angular no longer guesses when to run change detection by patching the browser. Instead, it reacts to explicit signals: signal updates, template event bindings, and async pipes. When a signal a template depends on changes, only the affected bindings update. Nothing else gets checked.\r
-\r
-That is the mental shift. Change detection stops being "check everything, just in case" and becomes "update exactly what changed."\r
-\r
-## How I turned it on\r
-\r
-Two steps in a small app:\r
-\r
-\`\`\`ts\r
-// app.config.ts\r
-import { provideZonelessChangeDetection } from '@angular/core';\r
-\r
-export const appConfig = {\r
-  providers: [\r
-    provideZonelessChangeDetection(),\r
-  ],\r
-};\r
-\`\`\`\r
-\r
-Then remove the \`zone.js\` polyfill from \`angular.json\`. If you scaffold a fresh app with the Angular 20 CLI, \`ng new\` even asks whether you want a zoneless app up front.\r
-\r
-## What I ran into\r
-\r
-Zoneless rewards code that already uses signals. Components that lean on signals, \`computed\`, and the async pipe pretty much just worked. The rough edges showed up in older patterns: mutating a plain property inside a \`setTimeout\` and expecting the view to update. Without Zone.js, nothing tells Angular that happened.\r
-\r
-The fix is to move that state into a signal, or to trigger updates through the normal binding paths. Angular ships \`provideCheckNoChangesConfig\` (also in developer preview) to help spot updates that would have silently relied on Zone.js. I treated it as a checklist for readiness.\r
-\r
-## Should you switch now?\r
-\r
-My honest take as someone still leveling up: not for a large production app yet. It is developer preview for a reason. But it is absolutely worth trying on a side project or a new feature, because it pushes you toward signals, and signals are where Angular is going regardless.\r
-\r
-The reported gains are real (community reports mention 30 to 40 percent faster initial renders and far fewer unnecessary re-renders), but the bigger win for me was conceptual. Once you stop relying on Zone.js catching everything, you start writing state you can actually reason about.\r
-\r
-I am migrating one component at a time. That feels like the right pace.\r
-`;var cw=`---\r
-title: httpResource() is the data-fetching API I wanted in Angular\r
-slug: angular-httpresource\r
-date: 2026-07-05\r
-description: Angular 20 added httpResource(), a signal-based way to fetch data. No manual subscriptions, no loading flags to juggle. Here is how it works and where it fits.\r
-tags: angular, signals, http\r
----\r
-\r
-Fetching data in Angular used to mean the same dance every time: inject \`HttpClient\`, subscribe, store the result in a property, track a \`loading\` boolean by hand, remember to handle errors, and clean up the subscription. It works, but it is a lot of ceremony for "get this data and show it."\r
-\r
-Angular 20 introduced \`httpResource()\`, and it collapses most of that boilerplate into something reactive.\r
-\r
-## The basic shape\r
-\r
-\`httpResource()\` returns a resource whose \`value\` is a signal. You read it directly in the template.\r
-\r
-\`\`\`ts\r
-import { httpResource } from '@angular/common/http';\r
-\r
-export class UserComponent {\r
-  userId = signal(1);\r
-\r
-  user = httpResource(() =>\r
-    \`https://api.example.com/users/\${this.userId()}\`\r
-  );\r
-}\r
-\`\`\`\r
-\r
-\`\`\`html\r
-@if (user.isLoading()) {\r
-  <p>Loading...</p>\r
-} @else {\r
-  <p>{{ user.value()?.name }}</p>\r
-}\r
-\`\`\`\r
-\r
-Two things stood out to me immediately. First, there is no subscription to manage. Second, the request is reactive: because the URL function reads \`userId()\`, changing that signal automatically triggers a new request. Set \`userId.set(2)\` and the resource refetches on its own.\r
-\r
-## The pieces it gives you\r
-\r
-The returned resource is more than just a value. It exposes signals for the common states:\r
-\r
-- \`value()\` for the response body\r
-- \`isLoading()\` for the in-flight state\r
-- \`error()\` for failures\r
-- \`headers()\` and \`status()\` when you need them\r
-\r
-No more maintaining three parallel properties for one request.\r
-\r
-## It still uses HttpClient underneath\r
-\r
-This was the part that sold me. \`httpResource()\` runs on top of \`HttpClient\`, so your existing interceptors, auth headers, and error handling all still apply. You configure them the same way in the \`HttpClient\` provider. It is not a new HTTP stack, it is a reactive wrapper over the one you already know.\r
-\r
-## Where I would and would not use it\r
-\r
-It shines for read-driven UI: a detail view that depends on a selected id, a search box, a filter that reloads a list. Anywhere the request is a function of some reactive state, \`httpResource()\` fits naturally.\r
-\r
-For one-off imperative calls, like posting a form on a button click, plain \`HttpClient\` is still simpler. \`httpResource()\` is about data that reacts to state, not fire-and-forget actions.\r
-\r
-## Why this matters beyond convenience\r
-\r
-The deeper point is consistency. Angular is moving everything toward signals: state, derived values, and now data fetching. When your HTTP layer speaks the same reactive language as the rest of your component, you stop translating between paradigms. That is what makes the code easier to read six months later, which as someone still building confidence is exactly what I want.\r
-\r
-I have started reaching for \`httpResource()\` first in new components and only dropping to \`HttpClient\` when I actually need imperative control. So far it has made my components noticeably shorter.\r
-`;var lw=`---\r
-title: Incremental hydration made SSR click for me\r
-slug: angular-incremental-hydration\r
-date: 2026-06-28\r
-description: Server-side rendering gives you fast first paint, then ships a pile of JavaScript to wake the page up. Angular 20 incremental hydration only wakes up the parts that need it.\r
-tags: angular, ssr, performance\r
----\r
-\r
-I built this blog with Angular prerendering, so hydration is something I actually think about now. Here is the problem in one sentence: server-side rendering gives you fast, SEO-friendly HTML, but then the browser downloads and runs JavaScript to make the whole page interactive, even the parts nobody touches.\r
-\r
-That "wake up everything at once" step is called hydration, and it can undo a lot of the speed you gained from SSR. Angular 20 ships incremental hydration as a stable feature, and it changes the deal.\r
-\r
-## The idea\r
-\r
-Instead of hydrating the entire page on load, you hydrate components only when they are actually needed. You declare a trigger, and Angular defers the hydration of that block until the trigger fires.\r
-\r
-\`\`\`html\r
-@defer (hydrate on viewport) {\r
-  <app-comments />\r
-}\r
-\r
-@defer (hydrate on interaction) {\r
-  <app-share-widget />\r
-}\r
-\`\`\`\r
-\r
-The comments section only hydrates when it scrolls into view. The share widget only wakes up when someone interacts with it. Until then, the server-rendered HTML just sits there, visible and correct, costing zero JavaScript.\r
-\r
-## Triggers I found useful\r
-\r
-The ones I reached for most:\r
-\r
-- \`on viewport\` for anything below the fold\r
-- \`on interaction\` for widgets that do nothing until clicked\r
-- \`on idle\` for low-priority extras\r
-- \`on immediate\` when you do want it right away\r
-\r
-The mental model is simple: ask "does this need to be interactive the moment the page loads?" Usually the answer is no.\r
-\r
-## What it actually buys you\r
-\r
-Two things. Smaller initial JavaScript, because you are not shipping and running hydration code for the whole tree up front. And better Core Web Vitals, specifically Time to Interactive and First Input Delay, because the main thread is not blocked waking up components the user has not reached yet.\r
-\r
-For a content site like a blog, this is close to ideal. The article text is static HTML that never needed hydration in the first place. The interactive bits (a live demo, a comment box) hydrate on demand.\r
-\r
-## A caveat I hit\r
-\r
-Incremental hydration pairs with \`@defer\`, and you have to be honest about what is truly independent. If a deferred block shares state with something above it, you can get surprises about when that state becomes live. I kept deferred blocks self-contained, and things stayed predictable.\r
-\r
-There is also the \`PendingTasks\` API, now stable, which lets you hold the SSR response until certain tasks finish. Useful when you need data resolved before the server sends HTML.\r
-\r
-## My takeaway\r
-\r
-Before Angular 20, SSR felt like a tradeoff: great first paint, heavy hydration cost. Incremental hydration removes most of that tension. You render on the server, and you only pay for interactivity where you use it. For someone building content-first sites, that is exactly the right default.\r
-`;var uw=`---\r
-title: Angular's built-in control flow cleaned up my templates\r
-slug: angular-control-flow\r
-date: 2026-06-20\r
-description: No more importing NgIf and NgFor or fighting ng-template. Angular's @if, @for, and @switch are built into the template language, and Angular 20 stabilized the last of them.\r
-tags: angular, templates\r
----\r
-\r
-One of the small things that quietly makes Angular nicer to write in 2026 is the built-in control flow. \`@if\`, \`@for\`, and \`@switch\` are part of the template language itself, no imports, no structural directive gymnastics. Angular 20 stabilized \`@switch\`, so the whole set is now official.\r
-\r
-If you learned Angular on \`*ngIf\` and \`*ngFor\` like I did, the difference is worth internalizing.\r
-\r
-## Before and after\r
-\r
-The old way, with an else branch, meant an \`ng-template\` and a reference:\r
-\r
-\`\`\`html\r
-<div *ngIf="user; else loading">{{ user.name }}</div>\r
-<ng-template #loading>Loading...</ng-template>\r
-\`\`\`\r
-\r
-The new way reads like plain JavaScript:\r
-\r
-\`\`\`html\r
-@if (user) {\r
-  <div>{{ user.name }}</div>\r
-} @else {\r
-  <p>Loading...</p>\r
-}\r
-\`\`\`\r
-\r
-No template reference, no jumping around the file to find \`#loading\`. The else branch is right there.\r
-\r
-## @for, and the track that is now required\r
-\r
-\`@for\` follows the same pattern, but with one rule the old \`*ngFor\` let you skip: you must provide \`track\`.\r
-\r
-\`\`\`html\r
-@for (post of posts; track post.slug) {\r
-  <article>{{ post.title }}</article>\r
-} @empty {\r
-  <p>No posts yet.</p>\r
-}\r
-\`\`\`\r
-\r
-Two upgrades here. \`track\` is mandatory, which nudges you toward stable identity and better rendering performance instead of Angular re-creating DOM nodes needlessly. And \`@empty\` gives you a first-class empty state, which used to need a separate \`@if\`.\r
-\r
-## @switch, now stable\r
-\r
-\`@switch\` replaces the \`[ngSwitch]\` attribute trio with something cleaner and type-checked at compile time:\r
-\r
-\`\`\`html\r
-@switch (status) {\r
-  @case ('loading') { <app-spinner /> }\r
-  @case ('error') { <app-error /> }\r
-  @default { <app-content /> }\r
-}\r
-\`\`\`\r
-\r
-No wrapper element just to hold the switch, and the compiler validates the cases.\r
-\r
-## Why I actually prefer it\r
-\r
-Three reasons, in order of how much they matter to me.\r
-\r
-It reads like code. When a template branches the way JavaScript branches, there is less translation happening in my head.\r
-\r
-It is built in. Nothing to import into every standalone component. One less line of boilerplate per file adds up.\r
-\r
-It is safer. Required \`track\`, compile-time checks on \`@switch\`, and no dangling template references mean fewer of the silent mistakes I used to make.\r
-\r
-## Migrating is painless\r
-\r
-Angular ships a schematic that converts the old syntax for you:\r
-\r
-\`\`\`bash\r
-ng generate @angular/core:control-flow\r
-\`\`\`\r
-\r
-I ran it on an older project and it handled the bulk automatically. I only had to eyeball a few complex \`*ngIf\` chains.\r
-\r
-This is not a flashy feature. It is the kind of change you stop noticing after a week because the new way is just obviously better. Those are usually the ones worth adopting first.\r
-`;var dw=`---\r
-title: Moving component state from RxJS to signals\r
-slug: rxjs-to-signals\r
-date: 2026-06-12\r
-description: Signals are not a replacement for RxJS, but for local component state they remove a lot of boilerplate. Here is how I think about which stays and which goes.\r
-tags: angular, signals, rxjs\r
----\r
-\r
-When signals stabilized in Angular, the first question I had was the obvious one: does this replace RxJS? Short answer, no. Longer answer, and the one that actually helped me, is that signals and RxJS solve different problems, and a lot of the RxJS I was writing was for the wrong problem.\r
-\r
-Signals are for state. RxJS is for events and streams over time. Once that line got clear in my head, migrating became easy.\r
-\r
-## The state that should be a signal\r
-\r
-Here is a pattern I used to write constantly with a \`BehaviorSubject\`:\r
-\r
-\`\`\`ts\r
-private count$ = new BehaviorSubject(0);\r
-count = this.count$.asObservable();\r
-\r
-increment() {\r
-  this.count$.next(this.count$.value + 1);\r
-}\r
-\`\`\`\r
-\r
-And in the template, an \`async\` pipe on \`count\`. It works, but there is a lot of machinery here for "a number that changes."\r
-\r
-The signal version:\r
-\r
-\`\`\`ts\r
-count = signal(0);\r
-\r
-increment() {\r
-  this.count.update((n) => n + 1);\r
-}\r
-\`\`\`\r
-\r
-In the template, just \`{{ count() }}\`. No \`async\` pipe, no subscription, no \`asObservable()\`. For plain component state, this is strictly less code and less to get wrong.\r
-\r
-## Derived values get better too\r
-\r
-Anywhere I chained \`map\` to compute a value from state, \`computed\` is cleaner:\r
-\r
-\`\`\`ts\r
-count = signal(0);\r
-doubled = computed(() => this.count() * 2);\r
-\`\`\`\r
-\r
-\`computed\` caches and only recalculates when a dependency actually changes. No operator pipeline, no wondering when it emits.\r
-\r
-## The RxJS I kept\r
-\r
-I did not delete RxJS. I kept it for what it is genuinely good at:\r
-\r
-- Debounced search inputs (\`debounceTime\`, \`switchMap\`)\r
-- WebSocket and event streams\r
-- Anything where timing and cancellation are the whole point\r
-\r
-These are streams of events over time, and RxJS models them far better than signals do.\r
-\r
-## The bridge between them\r
-\r
-The useful part is you do not have to choose per feature. Angular gives you converters:\r
-\r
-\`\`\`ts\r
-import { toSignal, toObservable } from '@angular/core/rxjs-interop';\r
-\r
-// Observable -> Signal, read it in the template with no async pipe\r
-data = toSignal(this.http.get('/api/data'));\r
-\r
-// Signal -> Observable, when you need operators\r
-search$ = toObservable(this.searchTerm).pipe(debounceTime(300));\r
-\`\`\`\r
-\r
-So a common pattern for me now is: keep the stream in RxJS where debouncing or switching matters, then \`toSignal\` at the edge so the template stays simple.\r
-\r
-## How I decide\r
-\r
-My rule of thumb, as someone still building confidence with both:\r
-\r
-- Is it a value the UI reads? Signal.\r
-- Is it a value derived from other values? \`computed\`.\r
-- Is it a sequence of events over time, or does timing or cancellation matter? RxJS, then \`toSignal\` at the boundary.\r
-\r
-I am not doing a big-bang rewrite. I convert component state to signals as I touch each file, and I leave the genuinely stream-shaped code alone. The result is templates with fewer \`async\` pipes and state I can actually follow.\r
-`;var fw=`---\r
-title: What is MCP, and why every dev tool suddenly supports it\r
-slug: what-is-mcp\r
-date: 2026-06-04\r
-description: The Model Context Protocol went from a niche idea to the default way LLMs talk to tools. Here is what MCP is, in plain terms, from someone learning it.\r
-tags: ai, mcp, tools\r
----\r
-\r
-If you have poked at AI tooling lately, you have seen MCP everywhere. GitHub, Slack, Jira, Sentry, and Datadog all ship official ones. There are reportedly over 2,000 public MCP servers now. As someone learning AI automation, I wanted to actually understand what it is instead of nodding along.\r
-\r
-MCP stands for Model Context Protocol. In one line: it is a standard way for a language model to connect to external tools and data.\r
-\r
-## The problem it solves\r
-\r
-Before MCP, every AI tool integration was custom. If you wanted an assistant to read your database, call your API, or check your monitoring, someone wrote bespoke glue code for that specific model and that specific tool. Do it again for a different model, write the glue again.\r
-\r
-That does not scale. It is the same mess integrations always are before a standard shows up.\r
-\r
-## The analogy that made it click\r
-\r
-MCP is often described as "USB-C for AI tools," and that comparison is what made it land for me. Before USB-C, every device had its own charger. After, one connector works across everything.\r
-\r
-MCP is that connector, but for connecting models to capabilities. You write an MCP server once for your tool. Then any MCP-compatible client (Claude Code, an AI IDE, whatever comes next) can use it. Write once, works everywhere.\r
-\r
-## The two sides\r
-\r
-There are two roles:\r
-\r
-- An MCP server exposes a capability: query this database, read these docs, open a pull request, send this message.\r
-- An MCP client is the AI application that consumes those capabilities on the model's behalf.\r
-\r
-The model does not talk to your database directly. It asks the client, the client talks to the server over MCP, and the result comes back. Clean separation, and the same tool works no matter which model is driving.\r
-\r
-## Why it matters right now\r
-\r
-The developer role is shifting from writing every line to orchestrating AI agents that do work. But an agent is only as useful as the tools it can reach. An agent that can read your codebase, run your tests, and check your logs is genuinely helpful. One that can only generate text in a box is a toy.\r
-\r
-MCP is the plumbing that gives agents real reach. That is why adoption exploded: it is the standard that makes agents actually useful in a real workflow.\r
-\r
-## Where I am with it\r
-\r
-I am still early. I have used MCP-backed tools more than I have built servers. But the concept changed how I think about AI tooling. It stops being "which model is smartest" and becomes "what can this thing actually do in my environment," which is the question that matters for real work.\r
-\r
-If you are learning automation like I am, understanding MCP is worth an afternoon. It is the layer everything else is being built on top of.\r
-`;var hw=`---\r
-title: From coder to orchestrator: how AI is changing the job\r
-slug: coder-to-orchestrator\r
-date: 2026-05-27\r
-description: The loudest theme in AI development right now is not a tool, it is a role change. Developers are moving from writing code to orchestrating agents that write it. Here is what that means for someone still growing.\r
-tags: ai, agents, career\r
----\r
-\r
-The trend I keep seeing repeated across every 2026 AI roundup is not about a specific model or tool. It is about the job itself changing. The phrase people use is "from coder to orchestrator," and as someone actively job searching and still building confidence, I wanted to think through what it actually means for me.\r
-\r
-## What changed\r
-\r
-AI coding started as autocomplete: suggest the next line. In 2026 it is something different. Agents can plan a feature, write the code, run the tests, open a pull request, and iterate on failures, sometimes running for minutes or hours instead of a single prompt and response.\r
-\r
-So the developer's center of gravity moves. Less time typing every line, more time deciding what should be built, reviewing what the agent produced, and keeping it aligned with what the business actually needs.\r
-\r
-## The part that worried me, then didn't\r
-\r
-My first reaction was the honest one a lot of newer developers have: if the AI writes the code, what is my value? The answer I have landed on is that the fundamentals matter more, not less.\r
-\r
-An agent will happily generate a plausible-looking solution to the wrong problem. Someone has to know it is the wrong problem. When code generation is cheap, mistakes are cheap to produce too, which means the ability to review, spot a bad pattern, and say "no, do it this way" becomes the valuable skill.\r
-\r
-One line from an engineering leader stuck with me: the people who get outsized value from AI are the ones who can articulate what they want, why they want it, and what constraints matter. AI rewards clarity. Fundamentals keep you honest.\r
-\r
-## What orchestrating actually looks like\r
-\r
-From what I have tried and read, the skills that matter are:\r
-\r
-- Writing a clear, constrained spec instead of a vague ask\r
-- Reviewing generated code critically, not just running it\r
-- Knowing the architecture well enough to catch when the agent drifts\r
-- Breaking a big task into pieces an agent can handle and verify\r
-\r
-None of that is possible without understanding the code. Orchestration is not "stop learning to program." It is "understand it well enough to direct it."\r
-\r
-## Why this is oddly good news for someone learning\r
-\r
-Here is the reframe that helped me. The barrier to producing code is dropping. The value of judgment about code is rising. Judgment comes from doing the work, reading real codebases, breaking things, and fixing them.\r
-\r
-So the path does not change much. Learn the fundamentals, build real things, develop taste for what good looks like. What changes is the payoff: those same fundamentals now let you direct a system that produces far more than you could type by hand.\r
-\r
-I am not an orchestrator yet. I am still very much learning to code well. But I have stopped seeing AI as a threat to that and started seeing it as a multiplier that only works if the fundamentals are there. That is a much better thing to be anxious about, if you are going to be anxious about something.\r
-`;var pw=`---\r
-title: Vibe coding, honestly: where it helps and where it bites\r
-slug: vibe-coding-honestly\r
-date: 2026-05-20\r
-description: Vibe coding is one of the most hyped and most misunderstood ideas in AI development. Here is a grounded take on when leaning on the vibes works and when it burns you.\r
-tags: ai, vibe-coding, workflow\r
----\r
-\r
-"Vibe coding," a term Andrej Karpathy popularized, is everywhere. The loose definition: describe what you want to an AI, accept what it produces, and keep going on feel rather than reading every line. It sounds either liberating or reckless depending on who is describing it. Having tried it on real work, I think both reactions are right, and the trick is knowing which situation you are in.\r
-\r
-## The framing that actually helps\r
-\r
-The most useful thing Karpathy said, at least for me, is not about speed. It is this: AI automates fastest in domains where the output can be verified.\r
-\r
-That single idea sorts almost everything. If you can quickly and cheaply check whether the result is correct, leaning on the AI is great, because a wrong answer costs you almost nothing to catch. If you cannot easily verify correctness, vibe coding is where things quietly go wrong.\r
-\r
-## Where I let the vibes lead\r
-\r
-Cases where verification is cheap and I happily move fast:\r
-\r
-- A throwaway script to reshape some data, where I can just look at the output\r
-- A UI prototype I am going to click through anyway\r
-- Boilerplate with an obvious right answer, like a config or a mapping function\r
-- Exploring an unfamiliar API, where running it tells me if it worked\r
-\r
-In all of these, if the AI is wrong, I find out in seconds. Low stakes, fast feedback, let it rip.\r
-\r
-## Where it bites\r
-\r
-The failures show up exactly where verification is hard:\r
-\r
-- Security-sensitive code, where "looks fine" and "is safe" are very different\r
-- Complex business logic with edge cases you cannot eyeball\r
-- Anything touching money, auth, or user data\r
-- Code that will live for years and be maintained by someone else\r
-\r
-Here the plausible-looking answer is the dangerous one. It compiles, it runs on the happy path, and the bug is in the case you did not check. When generation is cheap, mistakes are cheap to produce too, and they hide well.\r
-\r
-## The honest middle ground\r
-\r
-I do not think vibe coding is a yes or no. It is a dial you set based on how expensive a wrong answer is to catch.\r
-\r
-My actual workflow: let the AI draft aggressively, then shift into review mode with the dial turned the other way. The higher the stakes, the more I read every line, write tests, and refuse to ship on vibes alone. For a prototype, I barely look. For auth logic, I read all of it.\r
-\r
-The mistake I see, and made early on, is using the same dial everywhere: either distrusting AI for everything and losing the speed, or trusting it for everything and shipping subtle bugs. The skill is matching the trust to the verifiability.\r
-\r
-Vibe coding is a real productivity unlock. It is just not a personality. It is a tool you point at the right problems.\r
-`;var gw=`---\r
-title: Automating a real task with n8n and an LLM\r
-slug: n8n-llm-automation\r
-date: 2026-05-13\r
-description: Tutorials are easy. Building an automation that solves an actual annoyance is where it clicks. Here is how I think about wiring n8n to an LLM for real work.\r
-tags: ai, n8n, automation\r
----\r
-\r
-I have been learning n8n, and my honest north star has been simple: build something real, not just follow another tutorial. n8n is a workflow automation tool where you connect nodes into a pipeline, and the moment it gets interesting is when one of those nodes is an LLM.\r
-\r
-This post is less a step-by-step and more how I have come to think about combining the two, because that mental model took me longer to build than the clicking-nodes part.\r
-\r
-## The shape of a useful workflow\r
-\r
-Most LLM automations I have found worth building follow the same shape:\r
-\r
-1. A trigger. Something happens: a form is submitted, an email arrives, a schedule fires.\r
-2. Fetch context. Pull the data the task needs from an API, a database, or the trigger payload.\r
-3. Ask the LLM. Send that context to a model with a clear, constrained prompt.\r
-4. Do something with the answer. Post it, save it, send it, or route it.\r
-\r
-The LLM is one node in the middle. The value is in the plumbing around it: getting the right context in, and doing something real with what comes out.\r
-\r
-## The part I got wrong first\r
-\r
-My early attempts leaned too hard on the model. I would give a vague prompt and hope it figured everything out. It usually produced something plausible and slightly wrong, which is the worst kind of wrong in an automation because no human is reading it before it acts.\r
-\r
-What fixed it was treating the prompt like an interface. Be specific about the input format, the output format, and the constraints. If I want structured data back, I ask for exactly that shape and validate it in the next node. If the model returns something malformed, the workflow should catch it, not pass it downstream.\r
-\r
-## Verify before you automate the action\r
-\r
-The single most important lesson: match how much you automate to how easily you can verify the result.\r
-\r
-For low-stakes output, like drafting a first version of something a human will review anyway, I let the workflow run end to end. For anything that takes an irreversible action, like sending a message to a customer, I add a human approval step, or I have it produce a draft rather than send directly.\r
-\r
-This is the same idea as vibe coding. AI is safe to lean on where a wrong answer is cheap to catch. In an automation, "cheap to catch" often means a human sees it before it does damage.\r
-\r
-## Why this is worth learning\r
-\r
-The developer role is shifting toward orchestrating systems that do work, and n8n plus an LLM is a small, hands-on version of exactly that. You are not writing every step of the logic. You are wiring up context, directing a model, and deciding what happens with the output.\r
-\r
-I am not fluent yet. I still spend real time figuring out nodes and debugging why a branch did not fire. But building one workflow that solves an actual annoyance taught me more than a dozen tutorials did. If you are learning automation, pick a small real problem and wire it up. The concepts stick when there is something at stake, even if that something is just your own inbox.\r
-`;var mw=`---\r
-title: Using AI without multiplying your bad patterns\r
-slug: ai-without-bad-patterns\r
-date: 2026-05-06\r
-description: AI can accelerate output, but it accelerates whatever you already do, good habits and bad ones alike. Here is how I try to make sure it speeds up the right things.\r
-tags: coding, ai, workflow\r
----\r
-\r
-By 2026, most developers use AI in their daily workflow. The interesting shift is that the question stopped being whether to use it and became how to use it well. One line from the research I read framed it perfectly: AI can accelerate output, but it can also multiply poor patterns if you lack standards.\r
-\r
-That reframed the whole thing for me. AI is a multiplier. If your habits are solid, it makes you faster at good work. If they are sloppy, it makes you faster at producing mess. As someone still forming my habits, that felt like a warning worth taking seriously.\r
-\r
-## The trap\r
-\r
-The easy failure mode is treating AI output as done. It compiles, it runs, you move on. The problem is that AI is very good at producing code that looks right. Reviewing it takes discipline precisely because there is no red squiggle telling you to look harder.\r
-\r
-If you skip that review, you are not saving time, you are deferring it. The bug still exists, it just surfaces later when it is more expensive.\r
-\r
-## What I try to do instead\r
-\r
-A few habits I am building, none of them clever, all of them boring in the way that good habits are:\r
-\r
-Read what it wrote. Every line I ship, I understand. If I cannot explain why a piece of generated code works, I do not commit it. That rule alone has caught real problems.\r
-\r
-Give it my standards, not just my task. If the codebase has conventions, I tell the AI about them up front instead of fixing style after. A little context in the prompt beats a lot of cleanup after.\r
-\r
-Verify against something real. Tests, actually running the code, checking the output. "It looks fine" is not verification, it is a feeling.\r
-\r
-Keep ownership. The code has my name on the commit. The AI drafted it, but I am responsible for it. That framing keeps me from getting lazy about the review.\r
-\r
-## Structure beats more tools\r
-\r
-The recurring theme across everything I read about 2026 productivity is that the wins come from structure and discipline, not from adopting more tools. Teams that get value from AI redesign their workflow around review, prompt quality, and code ownership. The ones that just install a tool and hope for a productivity bump often multiply their existing problems instead.\r
-\r
-That scales down to one person. I do not need a fancier setup. I need clear standards and the discipline to hold generated code to them.\r
-\r
-## The honest payoff\r
-\r
-Used this way, AI has genuinely helped me. It gets me a first draft fast, it explains unfamiliar code, and it handles the boring parts so I can spend attention on the decisions that matter. But every bit of that value depends on me staying in the loop as the reviewer, not stepping out as a spectator.\r
-\r
-The tool got faster. The responsibility did not move. Getting comfortable with that balance is, I think, the actual skill of coding with AI in 2026.\r
-`;var yw=`---\r
-title: Help Scout has two APIs, and they don't share an auth model\r
-slug: helpscout-two-apis-two-auth\r
-date: 2026-07-16\r
-description: What tripped me up wiring Help Scout into an automation \u2014 two separate APIs, two different auth methods, and rate limits that count writes twice.\r
-tags: automation, api, n8n\r
----\r
-\r
-I spent time this year wiring Help Scout into an n8n automation, and the first thing that tripped me up had nothing to do with the workflow logic. It was authentication. Help Scout doesn't have one API. It has two, and they don't authenticate the same way.\r
-\r
-## Two APIs\r
-\r
-The **Docs API** handles knowledge base articles. Base URL is \`https://docsapi.helpscout.net/v1/\`. Auth here is old-school: an API key over HTTP Basic Auth. The key goes in the username field and you put a dummy password like \`X\` in the password field.\r
-\r
-The **Inbox API (v2)** handles conversations, customers, and mailboxes. Base URL is \`https://api.helpscout.net/v2\`. This one uses OAuth2 with a Bearer token:\r
-\r
-\`\`\`\r
-Authorization: Bearer <access_token>\r
-\`\`\`\r
-\r
-So if you read a guide that says "Help Scout uses OAuth2" and you're actually hitting the Docs API, you'll waste an hour wondering why Basic Auth is being rejected on one endpoint and required on another. They're just different products under one name.\r
-\r
-## OAuth2 has two flows\r
-\r
-For the Inbox API, you create an app under Your Profile > My Apps first. Then you pick a flow. Authorization Code flow is for integrations other Help Scout users will install. Client Credentials flow is for your own internal use.\r
-\r
-The catch: access tokens last about 48 hours. The authorization code flow gives you a refresh token to swap for a new pair. The client credentials flow has no refresh token, so you just re-authenticate when the token expires. Worth knowing before you build token-refresh logic that one flow doesn't need.\r
-\r
-## Rate limits count writes twice\r
-\r
-The Inbox API allows 400 requests per minute per account, shared across every user on that account. The part I didn't expect: write requests (POST, PUT, PATCH, DELETE) count as two. So it's 400 reads, or 200 writes, or some mix. When you hit the ceiling you get a 429, and the response carries a \`Retry-After\` header to tell you how long to wait.\r
-\r
-None of this is hard once you know it. But "one product, two APIs, two auth models" is the kind of thing docs mention in passing and you only really learn by getting a 401.\r
-\r
-Sources: [Help Scout Docs API](https://developer.helpscout.com/docs-api/), [Inbox API authentication](https://developer.helpscout.com/mailbox-api/overview/authentication/), [Inbox API rate limiting](https://developer.helpscout.com/mailbox-api/overview/rate-limiting/).\r
+`;var aw=`---
+title: Going zoneless in Angular 20, and why I finally get the hype
+slug: angular-20-zoneless
+date: 2026-07-12
+description: Zone.js has quietly powered Angular change detection for years. Angular 20 makes going without it real. Here is what zoneless actually changes and how I tried it.
+tags: angular, performance, signals
+---
+
+For most of my Angular career, Zone.js was just there. I never thought about it. It patched async APIs like \`setTimeout\`, \`addEventListener\`, and \`Promise\` so that Angular knew when to run change detection. It worked, but it also meant Angular re-checked large parts of the component tree on every async event, whether anything had actually changed or not.
+
+Angular 20 makes the alternative real. Zoneless change detection moved to developer preview, and the team has been running it in production (the Google Fonts app has been zoneless for months). This is the first time going without Zone.js feels like a real option and not an experiment.
+
+## What zoneless actually means
+
+Without Zone.js, Angular no longer guesses when to run change detection by patching the browser. Instead, it reacts to explicit signals: signal updates, template event bindings, and async pipes. When a signal a template depends on changes, only the affected bindings update. Nothing else gets checked.
+
+That is the mental shift. Change detection stops being "check everything, just in case" and becomes "update exactly what changed."
+
+## How I turned it on
+
+Two steps in a small app:
+
+\`\`\`ts
+// app.config.ts
+import { provideZonelessChangeDetection } from '@angular/core';
+
+export const appConfig = {
+  providers: [
+    provideZonelessChangeDetection(),
+  ],
+};
+\`\`\`
+
+Then remove the \`zone.js\` polyfill from \`angular.json\`. If you scaffold a fresh app with the Angular 20 CLI, \`ng new\` even asks whether you want a zoneless app up front.
+
+## What I ran into
+
+Zoneless rewards code that already uses signals. Components that lean on signals, \`computed\`, and the async pipe pretty much just worked. The rough edges showed up in older patterns: mutating a plain property inside a \`setTimeout\` and expecting the view to update. Without Zone.js, nothing tells Angular that happened.
+
+The fix is to move that state into a signal, or to trigger updates through the normal binding paths. Angular ships \`provideCheckNoChangesConfig\` (also in developer preview) to help spot updates that would have silently relied on Zone.js. I treated it as a checklist for readiness.
+
+## Should you switch now?
+
+My honest take as someone still leveling up: not for a large production app yet. It is developer preview for a reason. But it is absolutely worth trying on a side project or a new feature, because it pushes you toward signals, and signals are where Angular is going regardless.
+
+The reported gains are real (community reports mention 30 to 40 percent faster initial renders and far fewer unnecessary re-renders), but the bigger win for me was conceptual. Once you stop relying on Zone.js catching everything, you start writing state you can actually reason about.
+
+I am migrating one component at a time. That feels like the right pace.
+`;var cw=`---
+title: httpResource() is the data-fetching API I wanted in Angular
+slug: angular-httpresource
+date: 2026-07-05
+description: Angular 20 added httpResource(), a signal-based way to fetch data. No manual subscriptions, no loading flags to juggle. Here is how it works and where it fits.
+tags: angular, signals, http
+---
+
+Fetching data in Angular used to mean the same dance every time: inject \`HttpClient\`, subscribe, store the result in a property, track a \`loading\` boolean by hand, remember to handle errors, and clean up the subscription. It works, but it is a lot of ceremony for "get this data and show it."
+
+Angular 20 introduced \`httpResource()\`, and it collapses most of that boilerplate into something reactive.
+
+## The basic shape
+
+\`httpResource()\` returns a resource whose \`value\` is a signal. You read it directly in the template.
+
+\`\`\`ts
+import { httpResource } from '@angular/common/http';
+
+export class UserComponent {
+  userId = signal(1);
+
+  user = httpResource(() =>
+    \`https://api.example.com/users/\${this.userId()}\`
+  );
+}
+\`\`\`
+
+\`\`\`html
+@if (user.isLoading()) {
+  <p>Loading...</p>
+} @else {
+  <p>{{ user.value()?.name }}</p>
+}
+\`\`\`
+
+Two things stood out to me immediately. First, there is no subscription to manage. Second, the request is reactive: because the URL function reads \`userId()\`, changing that signal automatically triggers a new request. Set \`userId.set(2)\` and the resource refetches on its own.
+
+## The pieces it gives you
+
+The returned resource is more than just a value. It exposes signals for the common states:
+
+- \`value()\` for the response body
+- \`isLoading()\` for the in-flight state
+- \`error()\` for failures
+- \`headers()\` and \`status()\` when you need them
+
+No more maintaining three parallel properties for one request.
+
+## It still uses HttpClient underneath
+
+This was the part that sold me. \`httpResource()\` runs on top of \`HttpClient\`, so your existing interceptors, auth headers, and error handling all still apply. You configure them the same way in the \`HttpClient\` provider. It is not a new HTTP stack, it is a reactive wrapper over the one you already know.
+
+## Where I would and would not use it
+
+It shines for read-driven UI: a detail view that depends on a selected id, a search box, a filter that reloads a list. Anywhere the request is a function of some reactive state, \`httpResource()\` fits naturally.
+
+For one-off imperative calls, like posting a form on a button click, plain \`HttpClient\` is still simpler. \`httpResource()\` is about data that reacts to state, not fire-and-forget actions.
+
+## Why this matters beyond convenience
+
+The deeper point is consistency. Angular is moving everything toward signals: state, derived values, and now data fetching. When your HTTP layer speaks the same reactive language as the rest of your component, you stop translating between paradigms. That is what makes the code easier to read six months later, which as someone still building confidence is exactly what I want.
+
+I have started reaching for \`httpResource()\` first in new components and only dropping to \`HttpClient\` when I actually need imperative control. So far it has made my components noticeably shorter.
+`;var lw=`---
+title: Incremental hydration made SSR click for me
+slug: angular-incremental-hydration
+date: 2026-06-28
+description: Server-side rendering gives you fast first paint, then ships a pile of JavaScript to wake the page up. Angular 20 incremental hydration only wakes up the parts that need it.
+tags: angular, ssr, performance
+---
+
+I built this blog with Angular prerendering, so hydration is something I actually think about now. Here is the problem in one sentence: server-side rendering gives you fast, SEO-friendly HTML, but then the browser downloads and runs JavaScript to make the whole page interactive, even the parts nobody touches.
+
+That "wake up everything at once" step is called hydration, and it can undo a lot of the speed you gained from SSR. Angular 20 ships incremental hydration as a stable feature, and it changes the deal.
+
+## The idea
+
+Instead of hydrating the entire page on load, you hydrate components only when they are actually needed. You declare a trigger, and Angular defers the hydration of that block until the trigger fires.
+
+\`\`\`html
+@defer (hydrate on viewport) {
+  <app-comments />
+}
+
+@defer (hydrate on interaction) {
+  <app-share-widget />
+}
+\`\`\`
+
+The comments section only hydrates when it scrolls into view. The share widget only wakes up when someone interacts with it. Until then, the server-rendered HTML just sits there, visible and correct, costing zero JavaScript.
+
+## Triggers I found useful
+
+The ones I reached for most:
+
+- \`on viewport\` for anything below the fold
+- \`on interaction\` for widgets that do nothing until clicked
+- \`on idle\` for low-priority extras
+- \`on immediate\` when you do want it right away
+
+The mental model is simple: ask "does this need to be interactive the moment the page loads?" Usually the answer is no.
+
+## What it actually buys you
+
+Two things. Smaller initial JavaScript, because you are not shipping and running hydration code for the whole tree up front. And better Core Web Vitals, specifically Time to Interactive and First Input Delay, because the main thread is not blocked waking up components the user has not reached yet.
+
+For a content site like a blog, this is close to ideal. The article text is static HTML that never needed hydration in the first place. The interactive bits (a live demo, a comment box) hydrate on demand.
+
+## A caveat I hit
+
+Incremental hydration pairs with \`@defer\`, and you have to be honest about what is truly independent. If a deferred block shares state with something above it, you can get surprises about when that state becomes live. I kept deferred blocks self-contained, and things stayed predictable.
+
+There is also the \`PendingTasks\` API, now stable, which lets you hold the SSR response until certain tasks finish. Useful when you need data resolved before the server sends HTML.
+
+## My takeaway
+
+Before Angular 20, SSR felt like a tradeoff: great first paint, heavy hydration cost. Incremental hydration removes most of that tension. You render on the server, and you only pay for interactivity where you use it. For someone building content-first sites, that is exactly the right default.
+`;var uw=`---
+title: Angular's built-in control flow cleaned up my templates
+slug: angular-control-flow
+date: 2026-06-20
+description: No more importing NgIf and NgFor or fighting ng-template. Angular's @if, @for, and @switch are built into the template language, and Angular 20 stabilized the last of them.
+tags: angular, templates
+---
+
+One of the small things that quietly makes Angular nicer to write in 2026 is the built-in control flow. \`@if\`, \`@for\`, and \`@switch\` are part of the template language itself, no imports, no structural directive gymnastics. Angular 20 stabilized \`@switch\`, so the whole set is now official.
+
+If you learned Angular on \`*ngIf\` and \`*ngFor\` like I did, the difference is worth internalizing.
+
+## Before and after
+
+The old way, with an else branch, meant an \`ng-template\` and a reference:
+
+\`\`\`html
+<div *ngIf="user; else loading">{{ user.name }}</div>
+<ng-template #loading>Loading...</ng-template>
+\`\`\`
+
+The new way reads like plain JavaScript:
+
+\`\`\`html
+@if (user) {
+  <div>{{ user.name }}</div>
+} @else {
+  <p>Loading...</p>
+}
+\`\`\`
+
+No template reference, no jumping around the file to find \`#loading\`. The else branch is right there.
+
+## @for, and the track that is now required
+
+\`@for\` follows the same pattern, but with one rule the old \`*ngFor\` let you skip: you must provide \`track\`.
+
+\`\`\`html
+@for (post of posts; track post.slug) {
+  <article>{{ post.title }}</article>
+} @empty {
+  <p>No posts yet.</p>
+}
+\`\`\`
+
+Two upgrades here. \`track\` is mandatory, which nudges you toward stable identity and better rendering performance instead of Angular re-creating DOM nodes needlessly. And \`@empty\` gives you a first-class empty state, which used to need a separate \`@if\`.
+
+## @switch, now stable
+
+\`@switch\` replaces the \`[ngSwitch]\` attribute trio with something cleaner and type-checked at compile time:
+
+\`\`\`html
+@switch (status) {
+  @case ('loading') { <app-spinner /> }
+  @case ('error') { <app-error /> }
+  @default { <app-content /> }
+}
+\`\`\`
+
+No wrapper element just to hold the switch, and the compiler validates the cases.
+
+## Why I actually prefer it
+
+Three reasons, in order of how much they matter to me.
+
+It reads like code. When a template branches the way JavaScript branches, there is less translation happening in my head.
+
+It is built in. Nothing to import into every standalone component. One less line of boilerplate per file adds up.
+
+It is safer. Required \`track\`, compile-time checks on \`@switch\`, and no dangling template references mean fewer of the silent mistakes I used to make.
+
+## Migrating is painless
+
+Angular ships a schematic that converts the old syntax for you:
+
+\`\`\`bash
+ng generate @angular/core:control-flow
+\`\`\`
+
+I ran it on an older project and it handled the bulk automatically. I only had to eyeball a few complex \`*ngIf\` chains.
+
+This is not a flashy feature. It is the kind of change you stop noticing after a week because the new way is just obviously better. Those are usually the ones worth adopting first.
+`;var dw=`---
+title: Moving component state from RxJS to signals
+slug: rxjs-to-signals
+date: 2026-06-12
+description: Signals are not a replacement for RxJS, but for local component state they remove a lot of boilerplate. Here is how I think about which stays and which goes.
+tags: angular, signals, rxjs
+---
+
+When signals stabilized in Angular, the first question I had was the obvious one: does this replace RxJS? Short answer, no. Longer answer, and the one that actually helped me, is that signals and RxJS solve different problems, and a lot of the RxJS I was writing was for the wrong problem.
+
+Signals are for state. RxJS is for events and streams over time. Once that line got clear in my head, migrating became easy.
+
+## The state that should be a signal
+
+Here is a pattern I used to write constantly with a \`BehaviorSubject\`:
+
+\`\`\`ts
+private count$ = new BehaviorSubject(0);
+count = this.count$.asObservable();
+
+increment() {
+  this.count$.next(this.count$.value + 1);
+}
+\`\`\`
+
+And in the template, an \`async\` pipe on \`count\`. It works, but there is a lot of machinery here for "a number that changes."
+
+The signal version:
+
+\`\`\`ts
+count = signal(0);
+
+increment() {
+  this.count.update((n) => n + 1);
+}
+\`\`\`
+
+In the template, just \`{{ count() }}\`. No \`async\` pipe, no subscription, no \`asObservable()\`. For plain component state, this is strictly less code and less to get wrong.
+
+## Derived values get better too
+
+Anywhere I chained \`map\` to compute a value from state, \`computed\` is cleaner:
+
+\`\`\`ts
+count = signal(0);
+doubled = computed(() => this.count() * 2);
+\`\`\`
+
+\`computed\` caches and only recalculates when a dependency actually changes. No operator pipeline, no wondering when it emits.
+
+## The RxJS I kept
+
+I did not delete RxJS. I kept it for what it is genuinely good at:
+
+- Debounced search inputs (\`debounceTime\`, \`switchMap\`)
+- WebSocket and event streams
+- Anything where timing and cancellation are the whole point
+
+These are streams of events over time, and RxJS models them far better than signals do.
+
+## The bridge between them
+
+The useful part is you do not have to choose per feature. Angular gives you converters:
+
+\`\`\`ts
+import { toSignal, toObservable } from '@angular/core/rxjs-interop';
+
+// Observable -> Signal, read it in the template with no async pipe
+data = toSignal(this.http.get('/api/data'));
+
+// Signal -> Observable, when you need operators
+search$ = toObservable(this.searchTerm).pipe(debounceTime(300));
+\`\`\`
+
+So a common pattern for me now is: keep the stream in RxJS where debouncing or switching matters, then \`toSignal\` at the edge so the template stays simple.
+
+## How I decide
+
+My rule of thumb, as someone still building confidence with both:
+
+- Is it a value the UI reads? Signal.
+- Is it a value derived from other values? \`computed\`.
+- Is it a sequence of events over time, or does timing or cancellation matter? RxJS, then \`toSignal\` at the boundary.
+
+I am not doing a big-bang rewrite. I convert component state to signals as I touch each file, and I leave the genuinely stream-shaped code alone. The result is templates with fewer \`async\` pipes and state I can actually follow.
+`;var fw=`---
+title: What is MCP, and why every dev tool suddenly supports it
+slug: what-is-mcp
+date: 2026-06-04
+description: The Model Context Protocol went from a niche idea to the default way LLMs talk to tools. Here is what MCP is, in plain terms, from someone learning it.
+tags: ai, mcp, tools
+---
+
+If you have poked at AI tooling lately, you have seen MCP everywhere. GitHub, Slack, Jira, Sentry, and Datadog all ship official ones. There are reportedly over 2,000 public MCP servers now. As someone learning AI automation, I wanted to actually understand what it is instead of nodding along.
+
+MCP stands for Model Context Protocol. In one line: it is a standard way for a language model to connect to external tools and data.
+
+## The problem it solves
+
+Before MCP, every AI tool integration was custom. If you wanted an assistant to read your database, call your API, or check your monitoring, someone wrote bespoke glue code for that specific model and that specific tool. Do it again for a different model, write the glue again.
+
+That does not scale. It is the same mess integrations always are before a standard shows up.
+
+## The analogy that made it click
+
+MCP is often described as "USB-C for AI tools," and that comparison is what made it land for me. Before USB-C, every device had its own charger. After, one connector works across everything.
+
+MCP is that connector, but for connecting models to capabilities. You write an MCP server once for your tool. Then any MCP-compatible client (Claude Code, an AI IDE, whatever comes next) can use it. Write once, works everywhere.
+
+## The two sides
+
+There are two roles:
+
+- An MCP server exposes a capability: query this database, read these docs, open a pull request, send this message.
+- An MCP client is the AI application that consumes those capabilities on the model's behalf.
+
+The model does not talk to your database directly. It asks the client, the client talks to the server over MCP, and the result comes back. Clean separation, and the same tool works no matter which model is driving.
+
+## Why it matters right now
+
+The developer role is shifting from writing every line to orchestrating AI agents that do work. But an agent is only as useful as the tools it can reach. An agent that can read your codebase, run your tests, and check your logs is genuinely helpful. One that can only generate text in a box is a toy.
+
+MCP is the plumbing that gives agents real reach. That is why adoption exploded: it is the standard that makes agents actually useful in a real workflow.
+
+## Where I am with it
+
+I am still early. I have used MCP-backed tools more than I have built servers. But the concept changed how I think about AI tooling. It stops being "which model is smartest" and becomes "what can this thing actually do in my environment," which is the question that matters for real work.
+
+If you are learning automation like I am, understanding MCP is worth an afternoon. It is the layer everything else is being built on top of.
+`;var hw=`---
+title: From coder to orchestrator: how AI is changing the job
+slug: coder-to-orchestrator
+date: 2026-05-27
+description: The loudest theme in AI development right now is not a tool, it is a role change. Developers are moving from writing code to orchestrating agents that write it. Here is what that means for someone still growing.
+tags: ai, agents, career
+---
+
+The trend I keep seeing repeated across every 2026 AI roundup is not about a specific model or tool. It is about the job itself changing. The phrase people use is "from coder to orchestrator," and as someone actively job searching and still building confidence, I wanted to think through what it actually means for me.
+
+## What changed
+
+AI coding started as autocomplete: suggest the next line. In 2026 it is something different. Agents can plan a feature, write the code, run the tests, open a pull request, and iterate on failures, sometimes running for minutes or hours instead of a single prompt and response.
+
+So the developer's center of gravity moves. Less time typing every line, more time deciding what should be built, reviewing what the agent produced, and keeping it aligned with what the business actually needs.
+
+## The part that worried me, then didn't
+
+My first reaction was the honest one a lot of newer developers have: if the AI writes the code, what is my value? The answer I have landed on is that the fundamentals matter more, not less.
+
+An agent will happily generate a plausible-looking solution to the wrong problem. Someone has to know it is the wrong problem. When code generation is cheap, mistakes are cheap to produce too, which means the ability to review, spot a bad pattern, and say "no, do it this way" becomes the valuable skill.
+
+One line from an engineering leader stuck with me: the people who get outsized value from AI are the ones who can articulate what they want, why they want it, and what constraints matter. AI rewards clarity. Fundamentals keep you honest.
+
+## What orchestrating actually looks like
+
+From what I have tried and read, the skills that matter are:
+
+- Writing a clear, constrained spec instead of a vague ask
+- Reviewing generated code critically, not just running it
+- Knowing the architecture well enough to catch when the agent drifts
+- Breaking a big task into pieces an agent can handle and verify
+
+None of that is possible without understanding the code. Orchestration is not "stop learning to program." It is "understand it well enough to direct it."
+
+## Why this is oddly good news for someone learning
+
+Here is the reframe that helped me. The barrier to producing code is dropping. The value of judgment about code is rising. Judgment comes from doing the work, reading real codebases, breaking things, and fixing them.
+
+So the path does not change much. Learn the fundamentals, build real things, develop taste for what good looks like. What changes is the payoff: those same fundamentals now let you direct a system that produces far more than you could type by hand.
+
+I am not an orchestrator yet. I am still very much learning to code well. But I have stopped seeing AI as a threat to that and started seeing it as a multiplier that only works if the fundamentals are there. That is a much better thing to be anxious about, if you are going to be anxious about something.
+`;var pw=`---
+title: Vibe coding, honestly: where it helps and where it bites
+slug: vibe-coding-honestly
+date: 2026-05-20
+description: Vibe coding is one of the most hyped and most misunderstood ideas in AI development. Here is a grounded take on when leaning on the vibes works and when it burns you.
+tags: ai, vibe-coding, workflow
+---
+
+"Vibe coding," a term Andrej Karpathy popularized, is everywhere. The loose definition: describe what you want to an AI, accept what it produces, and keep going on feel rather than reading every line. It sounds either liberating or reckless depending on who is describing it. Having tried it on real work, I think both reactions are right, and the trick is knowing which situation you are in.
+
+## The framing that actually helps
+
+The most useful thing Karpathy said, at least for me, is not about speed. It is this: AI automates fastest in domains where the output can be verified.
+
+That single idea sorts almost everything. If you can quickly and cheaply check whether the result is correct, leaning on the AI is great, because a wrong answer costs you almost nothing to catch. If you cannot easily verify correctness, vibe coding is where things quietly go wrong.
+
+## Where I let the vibes lead
+
+Cases where verification is cheap and I happily move fast:
+
+- A throwaway script to reshape some data, where I can just look at the output
+- A UI prototype I am going to click through anyway
+- Boilerplate with an obvious right answer, like a config or a mapping function
+- Exploring an unfamiliar API, where running it tells me if it worked
+
+In all of these, if the AI is wrong, I find out in seconds. Low stakes, fast feedback, let it rip.
+
+## Where it bites
+
+The failures show up exactly where verification is hard:
+
+- Security-sensitive code, where "looks fine" and "is safe" are very different
+- Complex business logic with edge cases you cannot eyeball
+- Anything touching money, auth, or user data
+- Code that will live for years and be maintained by someone else
+
+Here the plausible-looking answer is the dangerous one. It compiles, it runs on the happy path, and the bug is in the case you did not check. When generation is cheap, mistakes are cheap to produce too, and they hide well.
+
+## The honest middle ground
+
+I do not think vibe coding is a yes or no. It is a dial you set based on how expensive a wrong answer is to catch.
+
+My actual workflow: let the AI draft aggressively, then shift into review mode with the dial turned the other way. The higher the stakes, the more I read every line, write tests, and refuse to ship on vibes alone. For a prototype, I barely look. For auth logic, I read all of it.
+
+The mistake I see, and made early on, is using the same dial everywhere: either distrusting AI for everything and losing the speed, or trusting it for everything and shipping subtle bugs. The skill is matching the trust to the verifiability.
+
+Vibe coding is a real productivity unlock. It is just not a personality. It is a tool you point at the right problems.
+`;var gw=`---
+title: Automating a real task with n8n and an LLM
+slug: n8n-llm-automation
+date: 2026-05-13
+description: Tutorials are easy. Building an automation that solves an actual annoyance is where it clicks. Here is how I think about wiring n8n to an LLM for real work.
+tags: ai, n8n, automation
+---
+
+I have been learning n8n, and my honest north star has been simple: build something real, not just follow another tutorial. n8n is a workflow automation tool where you connect nodes into a pipeline, and the moment it gets interesting is when one of those nodes is an LLM.
+
+This post is less a step-by-step and more how I have come to think about combining the two, because that mental model took me longer to build than the clicking-nodes part.
+
+## The shape of a useful workflow
+
+Most LLM automations I have found worth building follow the same shape:
+
+1. A trigger. Something happens: a form is submitted, an email arrives, a schedule fires.
+2. Fetch context. Pull the data the task needs from an API, a database, or the trigger payload.
+3. Ask the LLM. Send that context to a model with a clear, constrained prompt.
+4. Do something with the answer. Post it, save it, send it, or route it.
+
+The LLM is one node in the middle. The value is in the plumbing around it: getting the right context in, and doing something real with what comes out.
+
+## The part I got wrong first
+
+My early attempts leaned too hard on the model. I would give a vague prompt and hope it figured everything out. It usually produced something plausible and slightly wrong, which is the worst kind of wrong in an automation because no human is reading it before it acts.
+
+What fixed it was treating the prompt like an interface. Be specific about the input format, the output format, and the constraints. If I want structured data back, I ask for exactly that shape and validate it in the next node. If the model returns something malformed, the workflow should catch it, not pass it downstream.
+
+## Verify before you automate the action
+
+The single most important lesson: match how much you automate to how easily you can verify the result.
+
+For low-stakes output, like drafting a first version of something a human will review anyway, I let the workflow run end to end. For anything that takes an irreversible action, like sending a message to a customer, I add a human approval step, or I have it produce a draft rather than send directly.
+
+This is the same idea as vibe coding. AI is safe to lean on where a wrong answer is cheap to catch. In an automation, "cheap to catch" often means a human sees it before it does damage.
+
+## Why this is worth learning
+
+The developer role is shifting toward orchestrating systems that do work, and n8n plus an LLM is a small, hands-on version of exactly that. You are not writing every step of the logic. You are wiring up context, directing a model, and deciding what happens with the output.
+
+I am not fluent yet. I still spend real time figuring out nodes and debugging why a branch did not fire. But building one workflow that solves an actual annoyance taught me more than a dozen tutorials did. If you are learning automation, pick a small real problem and wire it up. The concepts stick when there is something at stake, even if that something is just your own inbox.
+`;var mw=`---
+title: Using AI without multiplying your bad patterns
+slug: ai-without-bad-patterns
+date: 2026-05-06
+description: AI can accelerate output, but it accelerates whatever you already do, good habits and bad ones alike. Here is how I try to make sure it speeds up the right things.
+tags: coding, ai, workflow
+---
+
+By 2026, most developers use AI in their daily workflow. The interesting shift is that the question stopped being whether to use it and became how to use it well. One line from the research I read framed it perfectly: AI can accelerate output, but it can also multiply poor patterns if you lack standards.
+
+That reframed the whole thing for me. AI is a multiplier. If your habits are solid, it makes you faster at good work. If they are sloppy, it makes you faster at producing mess. As someone still forming my habits, that felt like a warning worth taking seriously.
+
+## The trap
+
+The easy failure mode is treating AI output as done. It compiles, it runs, you move on. The problem is that AI is very good at producing code that looks right. Reviewing it takes discipline precisely because there is no red squiggle telling you to look harder.
+
+If you skip that review, you are not saving time, you are deferring it. The bug still exists, it just surfaces later when it is more expensive.
+
+## What I try to do instead
+
+A few habits I am building, none of them clever, all of them boring in the way that good habits are:
+
+Read what it wrote. Every line I ship, I understand. If I cannot explain why a piece of generated code works, I do not commit it. That rule alone has caught real problems.
+
+Give it my standards, not just my task. If the codebase has conventions, I tell the AI about them up front instead of fixing style after. A little context in the prompt beats a lot of cleanup after.
+
+Verify against something real. Tests, actually running the code, checking the output. "It looks fine" is not verification, it is a feeling.
+
+Keep ownership. The code has my name on the commit. The AI drafted it, but I am responsible for it. That framing keeps me from getting lazy about the review.
+
+## Structure beats more tools
+
+The recurring theme across everything I read about 2026 productivity is that the wins come from structure and discipline, not from adopting more tools. Teams that get value from AI redesign their workflow around review, prompt quality, and code ownership. The ones that just install a tool and hope for a productivity bump often multiply their existing problems instead.
+
+That scales down to one person. I do not need a fancier setup. I need clear standards and the discipline to hold generated code to them.
+
+## The honest payoff
+
+Used this way, AI has genuinely helped me. It gets me a first draft fast, it explains unfamiliar code, and it handles the boring parts so I can spend attention on the decisions that matter. But every bit of that value depends on me staying in the loop as the reviewer, not stepping out as a spectator.
+
+The tool got faster. The responsibility did not move. Getting comfortable with that balance is, I think, the actual skill of coding with AI in 2026.
+`;var yw=`---
+title: Help Scout has two APIs, and they don't share an auth model
+slug: helpscout-two-apis-two-auth
+date: 2026-07-16
+description: What tripped me up wiring Help Scout into an automation \u2014 two separate APIs, two different auth methods, and rate limits that count writes twice.
+tags: automation, api, n8n
+---
+
+I spent time this year wiring Help Scout into an n8n automation, and the first thing that tripped me up had nothing to do with the workflow logic. It was authentication. Help Scout doesn't have one API. It has two, and they don't authenticate the same way.
+
+## Two APIs
+
+The **Docs API** handles knowledge base articles. Base URL is \`https://docsapi.helpscout.net/v1/\`. Auth here is old-school: an API key over HTTP Basic Auth. The key goes in the username field and you put a dummy password like \`X\` in the password field.
+
+The **Inbox API (v2)** handles conversations, customers, and mailboxes. Base URL is \`https://api.helpscout.net/v2\`. This one uses OAuth2 with a Bearer token:
+
+\`\`\`
+Authorization: Bearer <access_token>
+\`\`\`
+
+So if you read a guide that says "Help Scout uses OAuth2" and you're actually hitting the Docs API, you'll waste an hour wondering why Basic Auth is being rejected on one endpoint and required on another. They're just different products under one name.
+
+## OAuth2 has two flows
+
+For the Inbox API, you create an app under Your Profile > My Apps first. Then you pick a flow. Authorization Code flow is for integrations other Help Scout users will install. Client Credentials flow is for your own internal use.
+
+The catch: access tokens last about 48 hours. The authorization code flow gives you a refresh token to swap for a new pair. The client credentials flow has no refresh token, so you just re-authenticate when the token expires. Worth knowing before you build token-refresh logic that one flow doesn't need.
+
+## Rate limits count writes twice
+
+The Inbox API allows 400 requests per minute per account, shared across every user on that account. The part I didn't expect: write requests (POST, PUT, PATCH, DELETE) count as two. So it's 400 reads, or 200 writes, or some mix. When you hit the ceiling you get a 429, and the response carries a \`Retry-After\` header to tell you how long to wait.
+
+None of this is hard once you know it. But "one product, two APIs, two auth models" is the kind of thing docs mention in passing and you only really learn by getting a 401.
+
+Sources: [Help Scout Docs API](https://developer.helpscout.com/docs-api/), [Inbox API authentication](https://developer.helpscout.com/mailbox-api/overview/authentication/), [Inbox API rate limiting](https://developer.helpscout.com/mailbox-api/overview/rate-limiting/).
 `;var mN=[iw,sw,aw,cw,lw,uw,dw,fw,hw,pw,gw,mw,yw],no=mN.map(ow).sort((e,t)=>t.date.localeCompare(e.date));function vw(e){return no.find(t=>t.slug===e)}var ro=class e{fuse=null;loading;query=vt("");results=vt(no);setQuery(t){return Je(this,null,function*(){this.query.set(t),t.trim()&&(yield this.ensureReady()),this.results.set(this.search(t))})}ensureReady(){return this.fuse?Promise.resolve():(this.loading||(this.loading=import("./chunk-L3L2424X.js").then(({default:t})=>{this.fuse=new t(no,{keys:[{name:"title",weight:3},{name:"tags",weight:2},{name:"description",weight:2},{name:"body",weight:1}],threshold:.35,ignoreLocation:!0,minMatchCharLength:2})})),this.loading)}search(t){let n=t.trim();return n?this.fuse?this.fuse.search(n).map(r=>r.item):no:no}static \u0275fac=function(n){return new(n||e)};static \u0275prov=I({token:e,factory:e.\u0275fac,providedIn:"root"})};var yN=e=>["/",e],vN=(e,t)=>t.slug;function wN(e,t){if(e&1&&H(0),e&2){let n=Pt();Cd(" ",n.results().length," result",n.results().length===1?"":"s"," ")}}function bN(e,t){e&1&&H(0," Writing ")}function EN(e,t){if(e&1&&(B(0,"span",9),H(1),V()),e&2){let n=Pt().$implicit;te(),Ye(n.tags[0])}}function DN(e,t){if(e&1&&(B(0,"li")(1,"a",5)(2,"h2",6),H(3),V(),B(4,"p",7),H(5),V(),B(6,"div",8),At(7,EN,2,1,"span",9),B(8,"time"),H(9),V(),st(10,"span",10),B(11,"span"),H(12),V()()()()),e&2){let n=t.$implicit;te(),kt("routerLink",Ly(7,yN,n.slug)),te(2),Ye(n.title),te(2),Ye(n.description),te(2),yn(n.tags[0]?7:-1),te(),Jt("datetime",n.date),te(),Ye(n.dateLabel),te(3),en("",n.readingTime," min read")}}function IN(e,t){if(e&1&&(B(0,"ul",3),$r(1,DN,13,9,"li",null,vN),V()),e&2){let n=Pt();te(),Vr(n.results())}}function CN(e,t){if(e&1&&(B(0,"p",4),H(1),V()),e&2){let n=Pt();te(),en("No posts match \u201C",n.query(),"\u201D.")}}var ac=class e{seo=p(to);search=p(ro);query=this.search.query;results=this.search.results;ngOnInit(){this.seo.update({title:"Blog",description:"Notes on Angular, TypeScript, and AI automation by Parwej Alam.",path:"/blog/",type:"website"})}static \u0275fac=function(n){return new(n||e)};static \u0275cmp=it({type:e,selectors:[["app-home"]],decls:13,vars:2,consts:[[1,"intro"],["aria-hidden","true",1,"avatar"],[1,"section-label"],[1,"post-list"],[1,"empty"],[1,"card",3,"routerLink"],[1,"card-title"],[1,"card-desc"],[1,"meta"],[1,"tag"],[1,"dot"]],template:function(n,r){n&1&&(B(0,"section",0)(1,"div",1),H(2,"PA"),V(),B(3,"div")(4,"h1"),H(5,"Parwej Alam"),V(),B(6,"p"),H(7,"Angular developer. Notes on Angular, TypeScript, and AI automation."),V()()(),B(8,"p",2),At(9,wN,1,2)(10,bN,1,0),V(),At(11,IN,3,0,"ul",3)(12,CN,2,1,"p",4)),n&2&&(te(9),yn(r.query()?9:10),te(2),yn(r.results().length?11:12))},dependencies:[Dn],styles:[".intro[_ngcontent-%COMP%]{margin-bottom:2rem;display:flex;gap:1.1rem;align-items:center}.avatar[_ngcontent-%COMP%]{width:60px;height:60px;border-radius:50%;flex:none;background:linear-gradient(135deg,var(--accent),#a78bfa);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.4rem}.intro[_ngcontent-%COMP%]   h1[_ngcontent-%COMP%]{font-family:var(--display);font-weight:600;font-size:2rem;margin:0 0 .15rem;letter-spacing:-.01em}.intro[_ngcontent-%COMP%]   p[_ngcontent-%COMP%]{color:var(--muted);margin:0;font-size:1rem}.section-label[_ngcontent-%COMP%]{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;margin:0 0 1.1rem}.post-list[_ngcontent-%COMP%]{list-style:none;padding:0;margin:0;display:grid;gap:1rem}.card[_ngcontent-%COMP%]{display:block;border:1px solid var(--border);background:var(--surface);border-radius:14px;padding:1.3rem 1.4rem;box-shadow:var(--shadow);text-decoration:none;color:inherit;transition:box-shadow .18s,transform .18s,border-color .18s}.card[_ngcontent-%COMP%]:hover{box-shadow:var(--shadow-hover);transform:translateY(-2px);border-color:var(--border-strong)}.card-title[_ngcontent-%COMP%]{font-size:1.22rem;font-weight:600;letter-spacing:-.01em;margin:0 0 .5rem}.card[_ngcontent-%COMP%]:hover   .card-title[_ngcontent-%COMP%]{color:var(--accent)}.card-desc[_ngcontent-%COMP%]{margin:0 0 .85rem;color:var(--muted);font-size:.98rem}time[_ngcontent-%COMP%]{white-space:nowrap}.empty[_ngcontent-%COMP%]{color:var(--muted)}"],changeDetection:0})};function mf(){return{async:!1,breaks:!1,extensions:null,gfm:!0,hooks:null,pedantic:!1,renderer:null,silent:!1,tokenizer:null,walkTokens:null}}var tr=mf();function Cw(e){tr=e}var Tw=/[&<>"']/,TN=new RegExp(Tw.source,"g"),Sw=/[<>"']|&(?!(#\d{1,7}|#[Xx][a-fA-F0-9]{1,6}|\w+);)/,SN=new RegExp(Sw.source,"g"),_N={"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"},ww=e=>_N[e];function Xe(e,t){if(t){if(Tw.test(e))return e.replace(TN,ww)}else if(Sw.test(e))return e.replace(SN,ww);return e}var MN=/&(#(?:\d+)|(?:#x[0-9A-Fa-f]+)|(?:\w+));?/ig;function xN(e){return e.replace(MN,(t,n)=>(n=n.toLowerCase(),n==="colon"?":":n.charAt(0)==="#"?n.charAt(1)==="x"?String.fromCharCode(parseInt(n.substring(2),16)):String.fromCharCode(+n.substring(1)):""))}var NN=/(^|[^\[])\^/g;function ne(e,t){let n=typeof e=="string"?e:e.source;t=t||"";let r={replace:(o,i)=>{let s=typeof i=="string"?i:i.source;return s=s.replace(NN,"$1"),n=n.replace(o,s),r},getRegex:()=>new RegExp(n,t)};return r}function bw(e){try{e=encodeURI(e).replace(/%25/g,"%")}catch{return null}return e}var Si={exec:()=>null};function Ew(e,t){let n=e.replace(/\|/g,(i,s,a)=>{let c=!1,l=s;for(;--l>=0&&a[l]==="\\";)c=!c;return c?"|":" |"}),r=n.split(/ \|/),o=0;if(r[0].trim()||r.shift(),r.length>0&&!r[r.length-1].trim()&&r.pop(),t)if(r.length>t)r.splice(t);else for(;r.length<t;)r.push("");for(;o<r.length;o++)r[o]=r[o].trim().replace(/\\\|/g,"|");return r}function lc(e,t,n){let r=e.length;if(r===0)return"";let o=0;for(;o<r;){let i=e.charAt(r-o-1);if(i===t&&!n)o++;else if(i!==t&&n)o++;else break}return e.slice(0,r-o)}function RN(e,t){if(e.indexOf(t[1])===-1)return-1;let n=0;for(let r=0;r<e.length;r++)if(e[r]==="\\")r++;else if(e[r]===t[0])n++;else if(e[r]===t[1]&&(n--,n<0))return r;return-1}function Dw(e,t,n,r){let o=t.href,i=t.title?Xe(t.title):null,s=e[1].replace(/\\([\[\]])/g,"$1");if(e[0].charAt(0)!=="!"){r.state.inLink=!0;let a={type:"link",raw:n,href:o,title:i,text:s,tokens:r.inlineTokens(s)};return r.state.inLink=!1,a}return{type:"image",raw:n,href:o,title:i,text:Xe(s)}}function AN(e,t){let n=e.match(/^(\s+)(?:```)/);if(n===null)return t;let r=n[1];return t.split(`
 `).map(o=>{let i=o.match(/^\s+/);if(i===null)return o;let[s]=i;return s.length>=r.length?o.slice(r.length):o}).join(`
 `)}var io=class{options;rules;lexer;constructor(t){this.options=t||tr}space(t){let n=this.rules.block.newline.exec(t);if(n&&n[0].length>0)return{type:"space",raw:n[0]}}code(t){let n=this.rules.block.code.exec(t);if(n){let r=n[0].replace(/^ {1,4}/gm,"");return{type:"code",raw:n[0],codeBlockStyle:"indented",text:this.options.pedantic?r:lc(r,`
